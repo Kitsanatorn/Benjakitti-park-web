@@ -1,0 +1,261 @@
+/* Custom Design Styles for Benjakitti Park Website */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary-forest: #0d3822;
+  --primary-emerald: #105634;
+  --primary-light: #2d8a57;
+  --primary-accent: #52b788;
+  --primary-mint: #d8f3dc;
+  --nature-sand: #fbfbfa;
+  --nature-card: #ffffff;
+  --dark-slate: #1e293b;
+}
+
+body {
+  font-family: 'Kanit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  scroll-behavior: smooth;
+  background-color: #f7faf7;
+  color: #1a2e22;
+}
+
+/* Glassmorphism Navigation */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(16, 86, 52, 0.12);
+}
+
+.glass-nav-scrolled {
+  box-shadow: 0 4px 20px -2px rgba(13, 56, 34, 0.08);
+}
+
+.nav-desktop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  white-space: nowrap;
+  min-width: 0;
+  gap: 0.7rem;
+  margin: 0 1rem;
+}
+
+.nav-desktop a {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 1280px) {
+  .nav-desktop {
+    gap: 1rem;
+  }
+
+  .nav-desktop a {
+    font-size: 0.82rem;
+  }
+}
+
+/* Hero Section Gradient & Visuals */
+.hero-gradient {
+  background: linear-gradient(180deg, rgba(13, 56, 34, 0.72) 0%, rgba(16, 86, 52, 0.85) 100%),
+              url('https://www.breathebangkok.org/wp-content/uploads/2022/02/1BS-Thumbnail-nologo-5.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Status Indicator Pulse */
+.pulse-green {
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  animation: pulse-ring 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+/* Floating Info Bar */
+.floating-bar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 86, 52, 0.15);
+  box-shadow: 0 20px 40px -15px rgba(13, 56, 34, 0.15);
+}
+
+/* Interactive Map Styling */
+#benjakitti-map {
+  width: 100%;
+  height: 580px;
+  border-radius: 1.25rem;
+  z-index: 10;
+}
+
+/* Leaflet Custom Layers Control */
+.leaflet-control-layers {
+  border-radius: 0.75rem !important;
+  border: 1px solid rgba(16, 86, 52, 0.15) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 6px 10px !important;
+}
+
+/* Leaflet Custom Pin Markers */
+.custom-park-pin {
+  background: transparent;
+  border: none;
+}
+
+.pin-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: white;
+  font-size: 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  border: 2.5px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.pin-badge:hover {
+  transform: scale(1.15) translateY(-2px);
+}
+
+.pin-gate { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.pin-parking { background: linear-gradient(135deg, #0284c7, #0369a1); }
+.pin-sports { background: linear-gradient(135deg, #d97706, #b45309); }
+.pin-facility { background: linear-gradient(135deg, #059669, #047857); }
+.pin-landmark { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+
+/* Route Elevation / Tracker */
+.route-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid transparent;
+}
+
+.route-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px -8px rgba(16, 86, 52, 0.12);
+  border-color: #52b788;
+}
+
+.route-card.active {
+  border-color: #105634;
+  background-color: #f0fdf4;
+}
+
+/* Flora & Fauna Card */
+.eco-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.eco-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 30px -10px rgba(13, 56, 34, 0.12);
+}
+
+/* Modal Backdrop */
+.modal-overlay {
+  background: rgba(13, 30, 20, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+/* Nature Reflection Tournament Styles */
+.tournament-pick-card {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.2s ease;
+  user-select: none;
+}
+
+.tournament-pick-card:hover {
+  transform: translateY(-6px);
+}
+
+.tournament-pick-card:active {
+  transform: scale(0.98);
+}
+
+.postcard-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.postcard-card:hover {
+  transform: translateY(-4px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f2;
+}
+::-webkit-scrollbar-thumb {
+  background: #a7c4b5;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #105634;
+}
+
+/* Accordion transition */
+.faq-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease-out, opacity 0.3s ease;
+  opacity: 0;
+}
+
+.faq-content.open {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* Nature Audio Player Floating Pill */
+.ambient-pill {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 86, 52, 0.2);
+  box-shadow: 0 10px 25px -5px rgba(13, 56, 34, 0.2);
+  transition: all 0.3s ease;
+}
+
+.ambient-pill:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px -4px rgba(13, 56, 34, 0.25);
+}
+
