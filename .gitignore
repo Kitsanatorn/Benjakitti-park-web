@@ -1,0 +1,5 @@
+# Raw, unprocessed photos: never commit (only web-sized copies go in assets/)
+benjakitti-photos-raw/
+*.HEIC
+*.heic
+benjakitti-photos-raw/

@@ -1,786 +1,492 @@
-// Benjakitti Forest Park Website Application Logic
-// Features: Leaflet GIS Map, Route Polylines, Sports Center Facilities, Flora/Fauna Explorer,
-// Complete Multilingual (TH/EN) Translator, Audio Ambience, FAQ Accordion, and Real-time Status.
+/* Main app: landing screen, hash routing, and the "Our Visit" + "The Park" tabs.
+   All text comes from content.js. The game lives in game.js. */
 
-let currentLang = 'th';
-window.currentLang = currentLang;
-let mapInstance = null;
-let mapMarkers = [];
-let activePolyline = null;
-let currentMapFilter = 'all';
-let currentFloraFilter = 'all';
+(() => {
+  const S = window.SITE;
+  const TABS = ["visit", "play", "park"];
+  const TAB_TITLES = { visit: "Our Visit", play: "Play", park: "The Park" };
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-// Route coordinates within Benjakitti Park for visual polylines
-const routeCoordinates = {
-  'running-outer': [
-    [13.7268, 100.5565],
-    [13.7275, 100.5582],
-    [13.7315, 100.5588],
-    [13.7345, 100.5575],
-    [13.7358, 100.5552],
-    [13.7330, 100.5528],
-    [13.7290, 100.5535],
-    [13.7268, 100.5565]
-  ],
-  'cycling-track': [
-    [13.7265, 100.5568],
-    [13.7272, 100.5585],
-    [13.7318, 100.5590],
-    [13.7348, 100.5578],
-    [13.7360, 100.5550],
-    [13.7328, 100.5524],
-    [13.7288, 100.5532],
-    [13.7265, 100.5568]
-  ],
-  'skywalk-trail': [
-    [13.7278, 100.5566],
-    [13.7292, 100.5558],
-    [13.7305, 100.5548],
-    [13.7322, 100.5552],
-    [13.7338, 100.5542],
-    [13.7325, 100.5535]
-  ]
-};
+  /* ---------- Shared helpers (also used by game.js) ---------- */
+  const esc = (value) =>
+    String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-document.addEventListener('DOMContentLoaded', () => {
-  initRealtimeStatus();
-  initMap();
-  renderAllSections();
-  setupEventListeners();
-  initAmbientAudio();
-  lucide.createIcons();
-});
+  // Minimal line icons (24×24, stroked with currentColor)
+  const ICONS = {
+    pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+    train: '<rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14M8.5 20l2-4M15.5 20l-2-4"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    ticket: '<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v8a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2z"/><path d="M14 6.5v2M14 11v2M14 15.5v2"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+    bridge: '<path d="M2 9h20M2 15h20M5 9v10M19 9v10M9 9v6M12 9v6M15 9v6"/>',
+    pulse: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+    binoculars: '<circle cx="6.5" cy="16" r="3.5"/><circle cx="17.5" cy="16" r="3.5"/><path d="M10 16h4M4 13.5 6 5h3l1 8M20 13.5 18 5h-3l-1 8"/>',
+    sunset: '<path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 4v5M5.6 10.6 7 12M18.4 10.6 17 12M8 21.5h8"/>',
+    route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/>',
+    landmark: '<path d="M3 21h18M5 21V10M9 21V10M15 21V10M19 21V10M2.5 10 12 4l9.5 6z"/>',
+    camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    chevronLeft: '<path d="m15 5-7 7 7 7"/>',
+    chevronRight: '<path d="m9 5 7 7-7 7"/>',
+    pause: '<path d="M9 5v14M15 5v14"/>',
+    play: '<path d="M7.5 5.5v13l11-6.5z"/>',
+    replay: '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5"/>'
+  };
+  const icon = (name, cls = "icon") =>
+    `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name] || ""}</svg>`;
 
-// Check if park is open (04:30 - 22:00)
-function initRealtimeStatus() {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const timeVal = hours + minutes / 60;
-  const isOpen = timeVal >= 4.5 && timeVal < 22;
-
-  const statusPill = document.getElementById('park-status-pill');
-  if (statusPill) {
-    if (isOpen) {
-      statusPill.textContent = parkData[currentLang].hero.statusOpen;
-      statusPill.className = 'font-medium text-emerald-300';
-    } else {
-      statusPill.textContent = parkData[currentLang].hero.statusClosed;
-      statusPill.className = 'font-medium text-amber-300';
-    }
+  // Image with a built-in labelled placeholder, shown if the file is missing.
+  function photo(src, alt, { label = alt, eager = false, cls = "" } = {}) {
+    const loading = eager ? 'fetchpriority="high"' : 'loading="lazy"';
+    return `<div class="photo ${cls}">
+      <img src="${esc(src)}" alt="${esc(alt)}" ${loading} decoding="async">
+      ${placeholder(src, label)}
+    </div>`;
   }
-}
+  const placeholder = (src, label) => `<span class="photo-missing" aria-hidden="true">
+      ${icon("image", "photo-missing-icon")}
+      <span>${esc(label)}</span>
+      <small>Add ${esc(src)}</small>
+    </span>`;
 
-// Initialize Google Map
-function initMap() {
-  const mapElement = document.getElementById('benjakitti-map');
-  if (!mapElement || !window.google || !window.google.maps) return;
-  if (mapInstance) return;
+  // Escapes text, then turns **word** into a highlighted <strong>
+  const emphasis = (text) => esc(text).replace(/\*\*(.+?)\*\*/g, '<strong class="hl">$1</strong>');
 
-  const parkCenter = { lat: 13.7295, lng: 100.5562 };
-  mapInstance = new window.google.maps.Map(mapElement, {
-    center: parkCenter,
-    zoom: 15.5,
-    mapTypeControl: true,
-    streetViewControl: true,
-    fullscreenControl: true,
-    zoomControl: true,
-    scrollwheel: false,
-    mapTypeControlOptions: {
-      style: window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-      position: window.google.maps.ControlPosition.TOP_RIGHT
+  const markMissing =(img) => img.closest(".photo, .banner-photo")?.classList.add("is-missing");
+
+  // Catch image load errors anywhere (errors don't bubble, so use capture).
+  document.addEventListener(
+    "error",
+    (e) => { if (e.target instanceof HTMLImageElement) markMissing(e.target); },
+    true
+  );
+
+  /* ---------- Fade/slide-in on scroll ---------- */
+  const revealer = "IntersectionObserver" in window && !reducedMotion.matches
+    ? new IntersectionObserver((entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return;
+          en.target.classList.add("is-visible");
+          revealer.unobserve(en.target);
+        });
+      }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 })
+    : null;
+
+  function observeReveals(root) {
+    root.querySelectorAll("[data-reveal]").forEach((el, i) => {
+      if (!revealer) return el.classList.add("is-visible");
+      el.style.setProperty("--delay", `${(i % 3) * 70}ms`);
+      revealer.observe(el);
+    });
+  }
+
+  window.UI = { esc, photo, icon, reducedMotion, observeReveals };
+
+  /* ---------- Rendering ---------- */
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  function renderStatic() {
+    $("#landing-label").textContent = S.group;
+    $("#landing-title").textContent = S.landing.title;
+    $("#landing-subtitle").textContent = S.landing.subtitle;
+    $("#explore-text").textContent = S.landing.button;
+    $("#explore-icon").innerHTML = icon("arrowRight");
+    // All landing backgrounds load up front (eager) so the crossfade never flashes
+    $("#landing-photo").innerHTML = S.landing.backgrounds
+      .map((b, i) => `<div class="photo landing-slide${i === 0 ? " is-active" : ""}">
+          <img src="${esc(b.src)}" alt="${i === 0 ? esc(b.alt) : ""}" ${i === 0 ? 'fetchpriority="high"' : ""} decoding="async">
+          ${i === 0 ? placeholder(b.src, "Hero photo") : ""}
+        </div>`)
+      .join("");
+    $("#topbar-code").textContent = S.group;
+    $("#footer").innerHTML = `<span>${esc(S.group)}</span><span aria-hidden="true">·</span><span>${esc(S.course)}</span>`;
+    document.documentElement.style.setProperty("--bg-photo", `url("${encodeURI(S.backgroundPhoto)}")`);
+  }
+
+  const banner = (b) => `<header class="banner">
+      <div class="banner-photo" aria-hidden="true"><img src="${esc(b.src)}" alt="" loading="lazy" decoding="async"></div>
+      <div class="banner-text wrap">
+        <p class="eyebrow eyebrow-light">${esc(b.eyebrow)}</p>
+        <h2 class="banner-title">${esc(b.title)}</h2>
+        <p class="banner-intro">${esc(b.intro)}</p>
+      </div>
+    </header>`;
+
+  const sectionHead = (eyebrow, title, id) => `<div class="section-head" data-reveal>
+      <p class="eyebrow">${esc(eyebrow)}</p>
+      <h2 id="${id}">${esc(title)}</h2>
+    </div>`;
+
+  function renderVisit() {
+    const v = S.visit;
+    const n = v.slides.length;
+    const pad = (i) => String(i).padStart(2, "0");
+
+    const slides = v.slides
+      .map((s, i) => `<figure class="show-slide photo" data-i="${i}" aria-hidden="true">
+          <img class="show-blur" data-src="${esc(s.src)}" alt="" decoding="async">
+          <img class="show-img" data-src="${esc(s.src)}" alt="${esc(s.alt || s.caption)}" decoding="async">
+          ${placeholder(s.src, s.caption)}
+        </figure>`)
+      .join("");
+    const card = (p) => `<article class="quote-card${p.story ? "" : " is-short"}" data-reveal>
+          <div class="quote-main">
+            <span class="qmark" aria-hidden="true">“</span>
+            <blockquote class="quote-text">${esc(p.quote)}</blockquote>
+            <div class="person">
+              <span class="mono" aria-hidden="true">${esc(p.name.charAt(0))}</span>
+              <div><strong>${esc(p.name)}</strong>${p.detail ? `<span>${esc(p.detail)}</span>` : ""}</div>
+            </div>
+          </div>
+          ${p.story ? `<p class="said">${esc(p.story)}</p>` : ""}
+          ${p.quote2 ? `<blockquote class="quote-2">“${esc(p.quote2)}”</blockquote>` : ""}
+          <div class="learned"><span class="label">What we learned</span><p>${esc(p.takeaway)}</p></div>
+        </article>`;
+
+    // One block per fieldwork day; the grid gets as many columns as full cards (max 3)
+    const groups = v.interviewGroups
+      .map((g, gi) => {
+        const cols = Math.min(3, Math.max(1, g.interviews.filter((p) => p.story).length));
+        return `<div class="visit-group" aria-labelledby="h-visit-${gi}" role="group">
+            <div class="visit-group-head" data-reveal>
+              <h3 id="h-visit-${gi}" class="visit-pill">${esc(g.title)}</h3>
+              ${g.date ? `<span class="visit-date">${esc(g.date)}</span>` : ""}
+            </div>
+            <div class="quote-grid" data-cols="${cols}">${g.interviews.map(card).join("")}</div>
+          </div>`;
+      })
+      .join("");
+    const cq = v.closingQuote;
+
+    $("#panel-visit").innerHTML = `
+      ${banner(v.banner)}
+      <div class="wrap">
+        <section class="section" aria-labelledby="h-photos">
+          ${sectionHead("Photo diary", "Our Day at the Park", "h-photos")}
+          <div class="show" role="region" aria-roledescription="carousel" aria-label="Photos from our visit" data-reveal>
+            <div class="show-stage" tabindex="0" aria-label="Photo slideshow. Use left and right arrow keys to change photo.">
+              ${slides}
+              <div class="show-shade" aria-hidden="true"></div>
+              <div class="show-progress" aria-hidden="true"><i></i></div>
+              <p class="show-caption" aria-live="off"></p>
+            </div>
+            <div class="show-controls">
+              <span class="show-count" aria-hidden="true"><b>01</b> / ${pad(n)}</span>
+              <div class="show-buttons">
+                <button type="button" class="icon-btn" data-step="-1" aria-label="Previous photo">${icon("chevronLeft")}</button>
+                <button type="button" class="icon-btn" data-toggle aria-label="Pause slideshow">${icon("pause")}</button>
+                <button type="button" class="icon-btn" data-step="1" aria-label="Next photo">${icon("chevronRight")}</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="h-interviews">
+          ${sectionHead("Interviews", "What people told us", "h-interviews")}
+          ${groups}
+          <aside class="theme" data-reveal>
+            <span class="label">Common theme</span>
+            <p>${emphasis(v.commonTheme)}</p>
+          </aside>
+          ${cq ? `<figure class="closing-quote" data-reveal>
+            <blockquote>“${esc(cq.text)}”</blockquote>
+            <figcaption>— ${esc(cq.by)}</figcaption>
+          </figure>` : ""}
+        </section>
+
+        <section class="section" aria-labelledby="h-perceptions">
+          <div class="editorial-intro">
+            ${sectionHead("Reflection", "Our final perceptions", "h-perceptions")}
+            <p class="prose" data-reveal>${esc(v.perceptions)}</p>
+          </div>
+          <figure class="editorial" data-reveal>
+            <blockquote>“${esc(S.takeaway)}”</blockquote>
+            <figcaption>Key takeaway · ${esc(S.group)}</figcaption>
+          </figure>
+        </section>
+      </div>`;
+
+    slideshow = createSlideshow($("#panel-visit .show"), v.slides);
+    observeReveals($("#panel-visit"));
+  }
+
+  function renderPark() {
+    const p = S.park;
+    const info = p.info
+      .map((i) => `<li class="info-card" data-reveal>
+          <span class="icon-wrap">${icon(i.icon)}</span>
+          <div><span class="label">${esc(i.label)}</span><p>${esc(i.value)}</p></div>
+        </li>`)
+      .join("");
+    const timeline = p.timeline
+      .map((t) => `<li data-reveal><span class="year">${esc(t.year)}</span><p>${esc(t.text)}</p></li>`)
+      .join("");
+    const todo = p.thingsToDo
+      .map((t) => `<li class="todo-card" data-reveal><span class="icon-wrap">${icon(t.icon)}</span><span>${esc(t.text)}</span></li>`)
+      .join("");
+    const tips = p.tips.map((t) => `<li>${icon("check")}<span>${esc(t)}</span></li>`).join("");
+
+    $("#panel-park").innerHTML = `
+      ${banner(p.banner)}
+      <div class="wrap">
+        <section class="section" aria-labelledby="h-info">
+          ${sectionHead("Plan a visit", "Location & visiting info", "h-info")}
+          <ul class="info-grid">${info}</ul>
+          <div data-reveal>
+            <a class="btn btn-primary" href="${esc(p.mapsUrl)}" target="_blank" rel="noopener noreferrer">
+              Open in Google Maps ${icon("external", "icon btn-icon")}<span class="sr-only"> (opens in a new tab)</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="h-history">
+          ${sectionHead("History", "From factory to forest", "h-history")}
+          <ol class="timeline">${timeline}</ol>
+        </section>
+
+        <section class="section" aria-labelledby="h-todo">
+          ${sectionHead("Things to do", "Make the most of it", "h-todo")}
+          <ul class="todo-grid">${todo}</ul>
+        </section>
+
+        <section class="section" aria-labelledby="h-tips">
+          ${sectionHead("Be a good visitor", "Visitor tips", "h-tips")}
+          <ul class="tips" data-reveal>${tips}</ul>
+        </section>
+      </div>`;
+
+    observeReveals($("#panel-park"));
+  }
+
+  /* ---------- Slideshow: autoplay crossfade ---------- */
+  const SLIDE_MS = 5000; // same rhythm as the landing backgrounds
+  let slideshow = null;
+
+  function createSlideshow(root, data) {
+    const stage = $(".show-stage", root);
+    const slides = [...root.querySelectorAll(".show-slide")];
+    const progress = $(".show-progress", root);
+    root.style.setProperty("--slide-ms", `${SLIDE_MS}ms`);
+    const caption = $(".show-caption", root);
+    const count = $(".show-count b", root);
+    const toggle = $("[data-toggle]", root);
+    const n = slides.length;
+    const pauses = new Set(); // reasons: hover, hold, focus, hidden, offscreen, user
+    let current = -1;   // photo on screen
+    let wanted = -1;    // photo we're moving to (may still be decoding)
+    let token = 0;      // newest request wins if several arrive quickly
+    let timer = 0, startedAt = 0, remaining = SLIDE_MS;
+
+    const load = (i) => {
+      slides[i].querySelectorAll("img[data-src]").forEach((img) => {
+        img.src = img.dataset.src;
+        img.removeAttribute("data-src");
+      });
+      return slides[i].querySelector(".show-img");
+    };
+
+    async function go(target, restart = false) {
+      const i = ((target % n) + n) % n;
+      if (i === wanted && !restart) return;
+      wanted = i;
+      const mine = ++token;
+      const img = load(i);
+      try { await img.decode(); } catch (e) { /* missing file: placeholder shows */ }
+      if (mine !== token) return; // a newer click/swipe superseded this one
+      if (current >= 0) {
+        slides[current].classList.remove("is-active");
+        slides[current].setAttribute("aria-hidden", "true");
+      }
+      current = i;
+      slides[i].classList.add("is-active");
+      slides[i].removeAttribute("aria-hidden");
+      load((i + 1) % n); // preload the next photo so the crossfade never flashes
+
+      caption.classList.remove("is-in");
+      caption.innerHTML = (data[i].visit ? `<span class="show-visit">${esc(data[i].visit)}</span>` : "") +
+        `<span>${esc(data[i].caption)}</span>`;
+      void caption.offsetWidth;
+      caption.classList.add("is-in");
+      count.textContent = String(i + 1).padStart(2, "0");
+
+      // One thin bar for the whole show: it fills this photo's share while it's on screen
+      progress.style.setProperty("--from", i / n);
+      progress.style.setProperty("--to", (i + 1) / n);
+      progress.classList.remove("run");
+      void progress.offsetWidth;
+      progress.classList.add("run");
+
+      remaining = SLIDE_MS;
+      schedule();
     }
+
+    function schedule() {
+      clearTimeout(timer);
+      if (pauses.size) return;
+      startedAt = performance.now();
+      timer = setTimeout(() => go(wanted + 1), remaining);
+    }
+
+    function pause(reason) {
+      if (!pauses.size) {
+        clearTimeout(timer);
+        remaining = Math.max(0, remaining - (performance.now() - startedAt));
+      }
+      pauses.add(reason);
+      sync();
+    }
+    function resume(reason) {
+      if (!pauses.delete(reason)) return;
+      sync();
+      if (!pauses.size) schedule();
+    }
+    function sync() {
+      root.classList.toggle("is-paused", pauses.size > 0);
+      const userPaused = pauses.has("user");
+      toggle.innerHTML = icon(userPaused ? "play" : "pause");
+      toggle.setAttribute("aria-label", userPaused ? "Play slideshow" : "Pause slideshow");
+      // Announce captions to screen readers only when not auto-advancing
+      caption.setAttribute("aria-live", pauses.size ? "polite" : "off");
+    }
+
+    // Temporary pauses: mouse hover and touch-hold. Both always resume by themselves.
+    stage.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") pause("hover"); });
+    stage.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") resume("hover"); });
+
+    // Touch-hold pauses; a horizontal swipe changes photo
+    let downX = 0, downY = 0, holdGuard = 0;
+    const endHold = () => { clearTimeout(holdGuard); resume("hold"); };
+    stage.addEventListener("pointerdown", (e) => {
+      downX = e.clientX; downY = e.clientY;
+      pause("hold");
+      // Safety net: if the browser never sends pointerup (e.g. a long-press menu), resume anyway
+      clearTimeout(holdGuard);
+      holdGuard = setTimeout(endHold, 4000);
+    });
+    stage.addEventListener("pointerup", (e) => {
+      const dx = e.clientX - downX, dy = e.clientY - downY;
+      endHold();
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1);
+    });
+    stage.addEventListener("pointercancel", endHold);
+    stage.addEventListener("lostpointercapture", endHold);
+
+    root.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      if (btn.dataset.step) step(Number(btn.dataset.step));
+      if (btn.hasAttribute("data-toggle")) pauses.has("user") ? resume("user") : pause("user");
+    });
+
+    // Only stop while the browser tab itself is hidden (it resumes when you come back)
+    document.addEventListener("visibilitychange", () => (document.hidden ? pause("hidden") : resume("hidden")));
+
+    function step(d) { go((wanted >= 0 ? wanted : 0) + d); }
+
+    // Called every time the Our Visit tab is shown: play from the first photo.
+    // Nothing downloads before this, so the landing screen loads faster.
+    function start() {
+      clearTimeout(timer);
+      remaining = SLIDE_MS;
+      pauses.delete("user"); // default state is always "playing"
+      sync();
+      go(0, true);
+    }
+
+    return { step, pause, resume, start };
+  }
+
+  // Arrow keys change the photo while on the "Our Visit" tab (not while typing).
+  document.addEventListener("keydown", (e) => {
+    if (!slideshow || currentTab() !== "visit" || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.target.closest("input, textarea, select")) return;
+    if (e.key === "ArrowRight") { slideshow.step(1); e.preventDefault(); }
+    if (e.key === "ArrowLeft") { slideshow.step(-1); e.preventDefault(); }
   });
 
-  renderMapMarkers();
-}
-window.initMap = initMap;
+  /* ---------- Landing background rotation ---------- */
+  const LANDING_MS = 5000;
+  let landingTimer = 0;
+  let landingIndex = 0;
 
-// Render Google Map Markers
-function renderMapMarkers() {
-  if (!mapInstance || !window.google || !window.google.maps) return;
+  function startLanding() {
+    const slides = document.querySelectorAll(".landing-slide");
+    if (landingTimer || slides.length < 2) return;
+    landingTimer = setInterval(() => {
+      if (document.hidden) return;
+      slides[landingIndex].classList.remove("is-active");
+      landingIndex = (landingIndex + 1) % slides.length;
+      slides[landingIndex].classList.add("is-active");
+    }, LANDING_MS);
+  }
+  function stopLanding() {
+    clearInterval(landingTimer);
+    landingTimer = 0;
+  }
 
-  // Clear existing markers
-  mapMarkers.forEach(marker => marker.setMap(null));
-  mapMarkers = [];
+  /* ---------- Routing ---------- */
+  const currentTab = () => {
+    const h = location.hash.slice(1);
+    return TABS.includes(h) ? h : null;
+  };
 
-  const points = parkData[currentLang].mapPoints;
+  function route() {
+    const tab = currentTab();
+    const landing = $("#landing");
+    const app = $("#app");
 
-  points.forEach(point => {
-    if (currentMapFilter !== 'all' && point.category !== currentMapFilter) {
+    if (!tab) {
+      app.hidden = true;
+      landing.hidden = false;
+      slideshow?.pause("tab");
+      startLanding();
+      document.title = S.landing.title;
       return;
     }
+    stopLanding();
 
-    const marker = new window.google.maps.Marker({
-      position: { lat: point.lat, lng: point.lng },
-      map: mapInstance,
-      title: point.name,
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 11,
-        fillColor: getMarkerColor(point.category),
-        fillOpacity: 1,
-        strokeColor: '#ffffff',
-        strokeWeight: 3
-      }
+    const wasLanding = !landing.hidden;
+    landing.hidden = true;
+    app.hidden = false;
+    document.title = `${TAB_TITLES[tab]} · ${S.landing.title}`;
+
+    $(".tabs").style.setProperty("--i", TABS.indexOf(tab));
+    document.querySelectorAll(".tab").forEach((a) => {
+      if (a.dataset.tab === tab) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
     });
+    document.querySelectorAll(".panel").forEach((p) => { p.hidden = p.dataset.panel !== tab; });
 
-    const infoWindow = new window.google.maps.InfoWindow({
-      content: `
-        <div style="font-family: Arial, sans-serif; color: #0f172a; min-width: 180px;">
-          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #15803d; margin-bottom: 4px;">${getCategoryLabel(point.category)}</div>
-          <div style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">${point.name}</div>
-          <div style="font-size: 12px; line-height: 1.5; color: #475569;">${point.desc}</div>
-          <div style="font-size: 11px; color: #64748b; margin-top: 8px; display: flex; align-items: center; gap: 6px;">🕒 ${point.hours}</div>
-        </div>
-      `
-    });
+    if (tab === "visit") { slideshow?.start(); slideshow?.resume("tab"); }
+    else slideshow?.pause("tab");
+    if (tab === "play") window.Game.mount($("#panel-play"));
 
-    marker.addListener('click', () => {
-      infoWindow.open({
-        anchor: marker,
-        map: mapInstance,
-        shouldFocus: false
-      });
-      selectMapPoint(point);
-    });
-
-    mapMarkers.push(marker);
-  });
-}
-
-function getPinIconHtml(category) {
-  let cls = 'pin-gate';
-  let emoji = '🚪';
-  if (category === 'parking') { cls = 'pin-parking'; emoji = '🅿️'; }
-  else if (category === 'sports') { cls = 'pin-sports'; emoji = '🏸'; }
-  else if (category === 'facility') { cls = 'pin-facility'; emoji = '🚻'; }
-  else if (category === 'landmark') { cls = 'pin-landmark'; emoji = '📸'; }
-
-  return `<div class="pin-badge ${cls}">${emoji}</div>`;
-}
-
-function getMarkerColor(category) {
-  const colors = {
-    gate: '#2563eb',
-    parking: '#0284c7',
-    sports: '#d97706',
-    facility: '#059669',
-    landmark: '#7c3aed'
-  };
-
-  return colors[category] || '#2563eb';
-}
-
-function getCategoryLabel(category) {
-  const labels = {
-    gate: currentLang === 'th' ? 'ทางเข้า-ออก' : 'Gate & Entrance',
-    parking: currentLang === 'th' ? 'ที่จอดรถ' : 'Parking Area',
-    sports: currentLang === 'th' ? 'ศูนย์กีฬา' : 'Sports Court',
-    facility: currentLang === 'th' ? 'สิ่งอำนวยความสะดวก' : 'Facility & Aid',
-    landmark: currentLang === 'th' ? 'จุดไฮไลต์' : 'Scenic Landmark'
-  };
-  return labels[category] || category;
-}
-
-function selectMapPoint(point) {
-  const nameEl = document.getElementById('detail-name');
-  const descEl = document.getElementById('detail-desc');
-  const hoursEl = document.getElementById('detail-hours');
-  const catEl = document.getElementById('detail-category-badge');
-  const mapsLink = document.getElementById('detail-google-maps');
-
-  if (nameEl) nameEl.textContent = point.name;
-  if (descEl) descEl.textContent = point.desc;
-  if (hoursEl) hoursEl.textContent = point.hours;
-  if (catEl) catEl.textContent = getCategoryLabel(point.category);
-  if (mapsLink) mapsLink.href = `https://maps.google.com/?q=${point.lat},${point.lng}`;
-
-  if (mapInstance) {
-    mapInstance.panTo({ lat: point.lat, lng: point.lng });
-    mapInstance.setZoom(16.5);
-  }
-}
-
-// Render Route Polyline on Map
-function highlightRouteOnMap(routeId) {
-  if (!mapInstance || !window.google || !window.google.maps) return;
-
-  if (activePolyline) {
-    activePolyline.setMap(null);
-    activePolyline = null;
-  }
-
-  const coords = routeCoordinates[routeId];
-  if (!coords) return;
-
-  let color = '#15803d'; // green
-  if (routeId === 'cycling-track') color = '#0284c7'; // blue
-  if (routeId === 'skywalk-trail') color = '#9333ea'; // purple
-
-  const path = coords.map(([lat, lng]) => ({ lat, lng }));
-  activePolyline = new window.google.maps.Polyline({
-    path,
-    geodesic: true,
-    strokeColor: color,
-    strokeOpacity: 0.85,
-    strokeWeight: 6,
-    map: mapInstance,
-    icons: routeId === 'skywalk-trail' ? [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 }, offset: '0', repeat: '12px' }] : undefined
-  });
-
-  const bounds = new window.google.maps.LatLngBounds();
-  path.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
-  mapInstance.fitBounds(bounds, 50);
-
-  const mapSection = document.getElementById('interactive-map');
-  if (mapSection) {
-    mapSection.scrollIntoView({ behavior: 'smooth' });
-  }
-}
-
-// Comprehensive i18n Dictionary Applicator
-function applyI18n() {
-  const ui = parkData[currentLang].ui;
-  if (!ui) return;
-
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (ui[key] !== undefined) {
-      el.innerHTML = ui[key];
+    window.scrollTo(0, 0);
+    // Move focus to the new panel for keyboard / screen-reader users
+    if (wasLanding || document.activeElement?.classList.contains("tab")) {
+      $(`#panel-${tab}`).focus({ preventScroll: true });
     }
-  });
-
-  // Language label on toggle button
-  const currentLangLabel = document.getElementById('current-lang-label');
-  if (currentLangLabel) {
-    currentLangLabel.textContent = currentLang === 'th' ? 'TH / EN' : 'EN / TH';
   }
-}
 
-// Render All Sections Data
-function renderAllSections() {
-  const d = parkData[currentLang];
-  const setText = (id, value) => {
-    const el = document.getElementById(id);
-    if (el && value !== undefined && value !== null) {
-      el.textContent = value;
-    }
-  };
+  // Frosted top bar gets a stronger background once the page scrolls
+  window.addEventListener("scroll", () => {
+    document.body.classList.toggle("is-scrolled", window.scrollY > 8);
+  }, { passive: true });
 
-  // Apply unified UI dictionary translations
-  applyI18n();
+  document.addEventListener("DOMContentLoaded", () => {
+    renderStatic();
+    renderVisit();
+    renderPark();
+    $("#explore-btn").addEventListener("click", () => { location.hash = "visit"; });
+    window.addEventListener("hashchange", route);
+    route();
 
-  // Hero & Quick Info texts
-  setText('hero-tagline', d.hero.tagline);
-  setText('hero-title', d.hero.title);
-  setText('hero-subtitle', d.hero.subtitle);
-  setText('hero-explore-btn', d.hero.exploreBtn);
-  setText('hero-events-btn', d.hero.eventsBtn);
-
-  setText('qi-hours-title', d.quickInfo.hoursTitle);
-  setText('qi-hours-time', d.quickInfo.hoursTime);
-  setText('qi-hours-detail', d.quickInfo.hoursDetail);
-
-  setText('qi-weather-title', d.quickInfo.weatherTitle);
-  setText('qi-weather-temp', d.quickInfo.weatherTemp);
-  setText('qi-weather-hum', d.quickInfo.weatherHum);
-
-  setText('qi-aqi-title', d.quickInfo.aqiTitle);
-  setText('qi-aqi-value', d.quickInfo.aqiValue);
-  setText('qi-aqi-pm', d.quickInfo.aqiPm);
-
-  setText('qi-entry-title', d.quickInfo.entryTitle);
-  setText('qi-entry-value', d.quickInfo.entryValue);
-  setText('qi-entry-detail', d.quickInfo.entryDetail);
-
-  // Render Highlight Zones
-  renderHighlightZones(d.highlightZones);
-
-  // Render Map Filter Chips
-  renderMapFilterChips(d.mapFilters);
-
-  // Render Routes
-  renderRoutes(d.routes);
-
-  // Render Getting Here Cards
-  renderGettingHere(d.gettingHere);
-
-  // Render Events
-  renderEvents(d.events);
-
-  // Render Flora Category Filter Buttons
-  renderFloraFilters();
-
-  // Render Flora & Fauna
-  renderFloraFauna(d.floraFauna);
-
-  // Render Sustainability Story
-  renderSustainability(d.sustainability);
-
-  // Render Rules
-  renderRules(d.rules);
-
-  // Render FAQs
-  renderFAQs(d.faqs);
-
-  // Re-render markers if map initialized
-  renderMapMarkers();
-}
-
-function renderHighlightZones(zones) {
-  const container = document.getElementById('zones-container');
-  if (!container) return;
-
-  container.innerHTML = zones.map(z => `
-    <div class="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col group">
-      <div class="relative h-56 overflow-hidden">
-        <img src="${z.img}" alt="${z.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
-        <span class="absolute top-4 left-4 bg-forest-900/80 backdrop-blur-md text-emerald-200 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-400/30">
-          ${z.badge}
-        </span>
-        <span class="absolute bottom-3 left-4 text-white text-xs font-medium flex items-center gap-1.5">
-          <i data-lucide="info" class="w-3.5 h-3.5 text-emerald-300"></i>
-          ${z.stats}
-        </span>
-      </div>
-      <div class="p-6 flex-1 flex flex-col justify-between">
-        <div>
-          <h3 class="text-xl font-bold text-slate-900 group-hover:text-forest-700 transition-colors">${z.name}</h3>
-          <div class="text-xs text-slate-400 font-semibold mb-3 uppercase tracking-wider">${z.nameEn}</div>
-          <p class="text-slate-600 text-sm leading-relaxed">${z.desc}</p>
-        </div>
-        <div class="pt-6 mt-4 border-t border-slate-100 flex items-center justify-between">
-          <a href="#interactive-map" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 group-hover:underline">
-            <span>${currentLang === 'th' ? 'ดูตำแหน่งบนแผนที่' : 'Locate on Map'}</span>
-            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-          </a>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderMapFilterChips(filters) {
-  const container = document.getElementById('map-filters-container');
-  if (!container) return;
-
-  container.innerHTML = filters.map(f => `
-    <button class="map-filter-btn px-4 py-2 rounded-full text-xs font-semibold transition-all ${currentMapFilter === f.id ? 'bg-forest-800 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-forest-50 border border-slate-200'}" data-filter="${f.id}">
-      ${f.name}
-    </button>
-  `).join('');
-
-  container.querySelectorAll('.map-filter-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      currentMapFilter = e.currentTarget.getAttribute('data-filter');
-      renderMapFilterChips(parkData[currentLang].mapFilters);
-      renderMapMarkers();
+    // Images that failed before the listener could see them
+    document.querySelectorAll(".photo img[src], .banner-photo img").forEach((img) => {
+      if (img.complete && img.naturalWidth === 0) markMissing(img);
     });
   });
-}
-
-function renderRoutes(routes) {
-  const container = document.getElementById('routes-container');
-  if (!container) return;
-
-  container.innerHTML = routes.map(r => `
-    <div class="route-card bg-white rounded-3xl p-6 shadow-md border border-slate-200 flex flex-col justify-between cursor-pointer" onclick="highlightRouteOnMap('${r.id}')">
-      <div>
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-bold uppercase tracking-wider ${r.type === 'running' ? 'text-emerald-700 bg-emerald-50' : r.type === 'cycling' ? 'text-blue-700 bg-blue-50' : 'text-purple-700 bg-purple-50'} px-3 py-1 rounded-full">
-            ${r.typeLabel}
-          </span>
-          <span class="text-2xl font-black text-forest-950">${r.distance}</span>
-        </div>
-
-        <h3 class="text-lg font-bold text-slate-900 mb-2">${r.title}</h3>
-        <p class="text-xs text-slate-500 font-medium mb-4">${currentLang === 'th' ? 'ระดับ' : 'Level'}: ${r.level}</p>
-
-        <div class="bg-slate-50 rounded-xl p-3 mb-4 text-xs text-slate-700">
-          <strong class="text-slate-900">${currentLang === 'th' ? 'ผิวทาง' : 'Surface'}:</strong> ${r.surface}
-        </div>
-
-        <ul class="space-y-1.5 text-xs text-slate-600 mb-6">
-          ${r.features.map(f => `<li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> ${f}</li>`).join('')}
-        </ul>
-      </div>
-
-      <button class="w-full py-2.5 px-4 bg-forest-50 hover:bg-forest-100 text-forest-900 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors">
-        <i data-lucide="eye" class="w-4 h-4 text-emerald-700"></i>
-        <span>${currentLang === 'th' ? 'แสดงเส้นทางบนแผนที่' : 'Preview Route on Map'}</span>
-      </button>
-    </div>
-  `).join('');
-}
-
-function renderGettingHere(transitList) {
-  const container = document.getElementById('getting-here-container');
-  if (!container || !transitList) return;
-
-  container.innerHTML = transitList.map(item => `
-    <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200 flex flex-col justify-between">
-      <div>
-        <div class="w-12 h-12 rounded-2xl bg-${item.color}-50 text-${item.color}-600 flex items-center justify-center mb-4">
-          <i data-lucide="${item.icon}" class="w-6 h-6"></i>
-        </div>
-        <h4 class="text-lg font-bold text-slate-900 mb-2">${item.title}</h4>
-        <p class="text-sm text-slate-600 leading-relaxed mb-4">${item.desc}</p>
-      </div>
-      <div>
-        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-${item.color}-700 bg-${item.color}-50 px-3 py-1 rounded-full">
-          ${item.badge}
-        </span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderEvents(events) {
-  const container = document.getElementById('events-container');
-  if (!container) return;
-
-  container.innerHTML = events.map(ev => `
-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-5 items-start">
-      <div class="bg-forest-800 text-white rounded-2xl p-4 text-center shrink-0 w-full sm:w-28">
-        <i data-lucide="calendar" class="w-6 h-6 mx-auto text-emerald-300 mb-1"></i>
-        <div class="text-xs font-semibold uppercase text-emerald-200">${ev.free ? (currentLang === 'th' ? 'ฟรี' : 'Free') : (currentLang === 'th' ? 'มีค่าสมัคร' : 'Register')}</div>
-      </div>
-      <div class="flex-1">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">${ev.category}</span>
-          <span class="text-xs text-slate-500">${ev.date} • ${ev.time}</span>
-        </div>
-        <h4 class="text-lg font-bold text-slate-900 mb-1">${ev.title}</h4>
-        <p class="text-xs text-slate-600 leading-relaxed mb-3">${ev.desc}</p>
-        <div class="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
-          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
-          <span>${ev.location}</span>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderFloraFilters() {
-  const container = document.getElementById('flora-filters-container');
-  if (!container) return;
-
-  const ui = parkData[currentLang].ui;
-  const categories = [
-    { cat: 'all', label: ui.catAll },
-    { cat: 'wetland', label: ui.catWetland },
-    { cat: 'trees', label: ui.catTrees },
-    { cat: 'birds', label: ui.catBirds },
-    { cat: 'fauna', label: ui.catFauna }
-  ];
-
-  container.innerHTML = categories.map(c => `
-    <button class="flora-filter-btn px-4 py-2 rounded-full text-xs font-semibold transition-all ${currentFloraFilter === c.cat ? 'bg-forest-800 text-white shadow-sm font-bold' : 'bg-white text-slate-700 hover:bg-forest-50 border border-slate-200'}" data-cat="${c.cat}">
-      ${c.label}
-    </button>
-  `).join('');
-
-  container.querySelectorAll('.flora-filter-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      currentFloraFilter = e.currentTarget.getAttribute('data-cat');
-      renderFloraFilters();
-      renderFloraFauna(parkData[currentLang].floraFauna);
-      lucide.createIcons();
-    });
-  });
-}
-
-function renderFloraFauna(list) {
-  const container = document.getElementById('flora-container');
-  if (!container) return;
-
-  const ui = parkData[currentLang].ui;
-  const filtered = currentFloraFilter === 'all'
-    ? list
-    : list.filter(item => item.category === currentFloraFilter);
-
-  container.innerHTML = filtered.map(item => `
-    <div class="eco-card bg-white rounded-2xl p-6 shadow-md border border-slate-200 flex flex-col justify-between cursor-pointer" onclick="openFloraModal('${item.id}')">
-      <div>
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-4xl">${item.icon}</span>
-          <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-            ${getCategoryName(item.category)}
-          </span>
-        </div>
-        <h4 class="text-lg font-bold text-slate-900 mb-0.5">${item.name}</h4>
-        <div class="text-xs italic text-slate-400 font-serif mb-3">${item.sciName}</div>
-        <div class="text-xs font-semibold text-emerald-800 bg-emerald-50/70 p-2.5 rounded-xl mb-3">
-          🌱 ${item.role}
-        </div>
-        <p class="text-xs text-slate-600 line-clamp-3 leading-relaxed mb-4">${item.desc}</p>
-      </div>
-
-      <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-        <span class="flex items-center gap-1">
-          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
-          ${item.zone}
-        </span>
-        <span class="text-emerald-700 font-bold hover:underline">
-          ${ui.floraViewDetail} &rarr;
-        </span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function getCategoryName(category) {
-  const names = {
-    wetland: currentLang === 'th' ? 'พืชชุ่มน้ำบำบัด' : 'Wetland Flora',
-    trees: currentLang === 'th' ? 'ไม้ยืนต้นประจำถิ่น' : 'Native Tree',
-    birds: currentLang === 'th' ? 'นกในสวน' : 'Park Birds',
-    fauna: currentLang === 'th' ? 'สัตว์และแมลง' : 'Urban Wildlife'
-  };
-  return names[category] || category;
-}
-
-function openFloraModal(id) {
-  const item = parkData[currentLang].floraFauna.find(f => f.id === id);
-  if (!item) return;
-
-  document.getElementById('flora-modal-icon').textContent = item.icon;
-  document.getElementById('flora-modal-cat').textContent = getCategoryName(item.category);
-  document.getElementById('flora-modal-name').textContent = item.name;
-  document.getElementById('flora-modal-sci').textContent = item.sciName;
-  document.getElementById('flora-modal-role').textContent = item.role;
-  document.getElementById('flora-modal-desc').textContent = item.desc;
-  document.getElementById('flora-modal-zone').textContent = item.zone;
-
-  const modal = document.getElementById('flora-modal');
-  if (modal) modal.classList.remove('hidden');
-}
-
-function renderSustainability(data) {
-  document.getElementById('story-title').textContent = data.title;
-  document.getElementById('story-subtitle').textContent = data.subtitle;
-
-  const grid = document.getElementById('sustainability-grid');
-  if (!grid) return;
-
-  grid.innerHTML = data.principles.map(p => `
-    <div class="bg-forest-50/50 rounded-2xl p-6 border border-forest-100/60">
-      <span class="text-2xl font-black text-emerald-600 block mb-2">${p.num}</span>
-      <h4 class="text-base font-bold text-forest-950 mb-2">${p.title}</h4>
-      <p class="text-xs text-slate-600 leading-relaxed">${p.desc}</p>
-    </div>
-  `).join('');
-}
-
-function renderRules(rules) {
-  const container = document.getElementById('rules-container');
-  if (!container) return;
-
-  container.innerHTML = rules.map(r => `
-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-      <div class="text-3xl mb-3">${r.icon}</div>
-      <h4 class="text-base font-bold text-slate-900 mb-2">${r.title}</h4>
-      <p class="text-xs text-slate-600 leading-relaxed">${r.desc}</p>
-    </div>
-  `).join('');
-}
-
-function renderFAQs(faqs) {
-  const container = document.getElementById('faq-container');
-  if (!container) return;
-
-  container.innerHTML = faqs.map((f, idx) => `
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-      <button class="faq-btn w-full px-6 py-4 text-left font-bold text-sm sm:text-base text-slate-900 hover:text-emerald-700 flex items-center justify-between gap-4 transition-colors">
-        <span>${f.q}</span>
-        <i data-lucide="chevron-down" class="faq-chevron w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200"></i>
-      </button>
-      <div class="faq-content px-6 pb-5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-        ${f.a}
-      </div>
-    </div>
-  `).join('');
-
-  // Add click events to FAQ buttons
-  container.querySelectorAll('.faq-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const content = btn.nextElementSibling;
-      const chevron = btn.querySelector('.faq-chevron');
-      const isOpen = content.classList.contains('open');
-
-      // Close other open faqs
-      container.querySelectorAll('.faq-content').forEach(c => c.classList.remove('open'));
-      container.querySelectorAll('.faq-chevron').forEach(ch => ch.style.transform = 'rotate(0deg)');
-
-      if (!isOpen) {
-        content.classList.add('open');
-        chevron.style.transform = 'rotate(180deg)';
-      }
-    });
-  });
-}
-
-// Event Listeners setup
-function setupEventListeners() {
-  // Language switcher toggle
-  const langBtn = document.getElementById('lang-toggle-btn');
-  if (langBtn) {
-    langBtn.addEventListener('click', () => {
-      currentLang = currentLang === 'th' ? 'en' : 'th';
-      window.currentLang = currentLang;
-      renderAllSections();
-      initRealtimeStatus();
-      window.dispatchEvent(new Event('languageChanged'));
-      lucide.createIcons();
-    });
-  }
-
-  // Recenter map button
-  const recenterBtn = document.getElementById('map-recenter-btn');
-  if (recenterBtn && mapInstance) {
-    recenterBtn.addEventListener('click', () => {
-      mapInstance.panTo({ lat: 13.7295, lng: 100.5562 });
-      mapInstance.setZoom(15.5);
-      if (activePolyline) {
-        activePolyline.setMap(null);
-        activePolyline = null;
-      }
-    });
-  }
-
-  // Mobile menu toggle
-  const mobileBtn = document.getElementById('mobile-menu-toggle');
-  const mobileMenu = document.getElementById('mobile-menu');
-  if (mobileBtn && mobileMenu) {
-    mobileBtn.addEventListener('click', () => {
-      mobileMenu.classList.toggle('hidden');
-    });
-  }
-
-  // Close flora modal
-  const closeFloraModalBtn = document.getElementById('close-flora-modal-btn');
-  if (closeFloraModalBtn) {
-    closeFloraModalBtn.addEventListener('click', () => {
-      document.getElementById('flora-modal').classList.add('hidden');
-    });
-  }
-}
-
-// Ambient Nature Sound Synthesizer via Web Audio API
-// Procedurally generates gentle wind rustle and sporadic bird chirps without external audio assets!
-let audioCtx = null;
-let isAudioPlaying = false;
-let windNode = null;
-let birdInterval = null;
-
-function initAmbientAudio() {
-  const btn = document.getElementById('ambient-audio-btn');
-  if (!btn) return;
-
-  btn.addEventListener('click', () => {
-    if (!audioCtx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContext();
-    }
-
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    isAudioPlaying = !isAudioPlaying;
-
-    const icon = document.getElementById('audio-icon');
-    const status = document.getElementById('audio-status');
-    const ui = parkData[currentLang].ui;
-
-    if (isAudioPlaying) {
-      startAmbientSound();
-      icon.setAttribute('data-lucide', 'volume-x');
-      status.textContent = ui.audioStatusPlay;
-    } else {
-      stopAmbientSound();
-      icon.setAttribute('data-lucide', 'volume-2');
-      status.textContent = ui.audioStatusStop;
-    }
-    lucide.createIcons();
-  });
-}
-
-function startAmbientSound() {
-  if (!audioCtx) return;
-
-  // 1. Soft wind breeze synthesis (pink noise through resonant lowpass)
-  const bufferSize = audioCtx.sampleRate * 2;
-  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const output = noiseBuffer.getChannelData(0);
-  let b0 = 0, b1 = 0, b2 = 0;
-
-  for (let i = 0; i < bufferSize; i++) {
-    const white = Math.random() * 2 - 1;
-    b0 = 0.99886 * b0 + white * 0.0555179;
-    b1 = 0.99332 * b1 + white * 0.0750759;
-    b2 = 0.96900 * b2 + white * 0.1538520;
-    output[i] = (b0 + b1 + b2) * 0.04;
-  }
-
-  const whiteNoise = audioCtx.createBufferSource();
-  whiteNoise.buffer = noiseBuffer;
-  whiteNoise.loop = true;
-
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(320, audioCtx.currentTime);
-
-  const gain = audioCtx.createGain();
-  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-
-  whiteNoise.connect(filter);
-  filter.connect(gain);
-  gain.connect(audioCtx.destination);
-  whiteNoise.start();
-  windNode = { source: whiteNoise, gain: gain };
-
-  // 2. Procedural bird chirp scheduler
-  birdInterval = setInterval(() => {
-    if (isAudioPlaying && Math.random() > 0.4) {
-      playBirdChirp();
-    }
-  }, 3500);
-}
-
-function playBirdChirp() {
-  if (!audioCtx || !isAudioPlaying) return;
-
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-
-  const startFreq = 2200 + Math.random() * 800;
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(startFreq + 1200, audioCtx.currentTime + 0.1);
-  osc.frequency.exponentialRampToValueAtTime(startFreq - 200, audioCtx.currentTime + 0.22);
-
-  gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.05);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.26);
-}
-
-function stopAmbientSound() {
-  if (windNode) {
-    try {
-      windNode.source.stop();
-    } catch (e) {}
-    windNode = null;
-  }
-  if (birdInterval) {
-    clearInterval(birdInterval);
-    birdInterval = null;
-  }
-}
+})();

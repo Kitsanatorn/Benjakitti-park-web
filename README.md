@@ -1,111 +1,65 @@
-# 🌿 เว็บไซต์สวนป่าเบญจกิติ (Benjakitti Forest Park Website)
+# A Visit to Benjakitti Forest Park
 
-เว็บไซต์สำหรับ **สวนป่าเบญจกิติ (Benjakitti Forest Park)** กรุงเทพมหานคร ได้รับการออกแบบตามแนวคิดทันสมัย รักษ์สิ่งแวดล้อม (Eco-Friendly) และเน้นประสบการณ์ผู้ใช้ (UX/UI) ที่ยอดเยี่ยม รองรับการใช้งานทั้งบนมือถือ แท็บเล็ต และคอมพิวเตอร์
+Group exhibition website for **GEN241 Module 3 "Interactive Exhibition: Real Aesthete"** (KMUTT), theme **Nature's Beauty**.
+It's a static site built with plain HTML, CSS and JavaScript. There is no build step and no backend is required.
 
----
+## Run locally
 
-## 🌟 ฟีเจอร์หลัก (Key Features)
+From the project folder, start any static server and open the address it prints:
 
-### 1. หน้าแรก (Home Page & Hero Banner)
-- **Hero Banner:** ภาพทิวทัศน์ Skywalk และป่ากลางเมือง พร้อมคำโปรยและปุ่มลัด
-- **Quick Info Bar:**
-  - สถานะเปิด-ปิดสวนแบบเรียลไทม์ (04:30 - 22:00 น.) พร้อมไฟสถานะ Pulse เขียว/ส้ม
-  - สภาพอากาศ อุณหภูมิ และความชื้น
-  - **ดัชนีคุณภาพอากาศ & ค่าฝุ่น PM 2.5 เรียลไทม์ (AQI)**
-  - ข้อมูลค่าเข้าชม (เข้าฟรีทุกคน)
-- **Highlight Zones (6 โซนไฮไลต์):** สวนป่าและพื้นที่ชุ่มน้ำ, Skywalk ลอยฟ้า, ศูนย์กีฬาเบญจกิติ, สวนน้ำ & เลนปั่น, Dog Park (สวนสุนัข) และลานอัฒจันทร์กลางแจ้ง
-
----
-
-### 2. 🏆 ฟีเจอร์ใหม่: Nature Reflection Tournament (กิจกรรมสำรวจมุมโปรดในสวน)
-กิจกรรมค้นหา **"มุมโปรดที่ตรงใจคุณที่สุด"** ในสวนป่าเบญจกิติผ่านกระบวนการเลือกภาพแบบ Tournament 5 รอบ:
-
-- **State 1: หน้าเริ่มต้น (Intro State):** คำแนะนำกิจกรรม ปุ่ม "เริ่มสำรวจมุมโปรด (5 รอบ)" และปุ่มลัดเปิดดูกระดานความรู้สึกสาธารณะ (Community Dashboard)
-- **State 2: โหมด Tournament 5 รอบ:**
-  - **รอบที่ 1:** สุ่มภาพสถานที่ 2 รูปจากคลัง 10 จุดสำคัญในสวน (ไม่ซ้ำกัน) แสดงประกบคู่ซ้าย-ขวา (Side-by-side)
-  - **รอบที่ 2 ถึง 5:** คงภาพที่ชนะเลิศในรอบก่อนไว้ทางฝั่งซ้าย (ติด Badge `🏆 มุมโปรดปัจจุบันของคุณ`) และสุ่มภาพท้าทายใหม่จากคลังที่ยังไม่เคยถูกนำมาแสดงในเซสชันนั้นมาประกบทางฝั่งขวา
-  - มี Progress Bar แสดงความคืบหน้ารายรอบ (`รอบที่ 1 / 5` ถึง `5 / 5`)
-  - แอนิเมชัน Fade-in นุ่มนวลเวลาเปลี่ยนรอบ
-  - **ระบบป้องกันการสุ่มซ้ำ:** ติดตามด้วย `shownPhotoIds (Set)` ทำให้ตลอดการเล่น 5 รอบ ประเมินภาพที่ไม่ซ้ำกันรวม 6 สถานที่
-- **State 3: หน้าสรุปผลและเขียนความรู้สึก (Final Reflection):**
-  - แสดงภาพแชมป์อันดับ 1 ของผู้เล่น พร้อมชื่อโซนและรายละเอียดสถานที่
-  - ฟอร์มเขียนความรู้สึก (Textarea) จำกัดไม่เกิน 200 ตัวอักษร พร้อมตัวนับจำนวนแบบเรียลไทม์ (`0 / 200`)
-  - ช่องกรอกชื่อ/นามปากกา (Default: `นักสำรวจนิรนาม` / `Anonymous Explorer`)
-  - ปุ่มส่งความรู้สึกขึ้นสู่กระดานชุมชน และปุ่มเล่นใหม่อีกครั้ง
-- **State 4: กระดานความรู้สึกสาธารณะ (Community Dashboard):**
-  - แสดงโปสการ์ดความรู้สึกจากผู้เยี่ยมชมทุกคนในรูปแบบ **Card Grid / Postcard Wall**
-  - แสดงภาพที่ชนะ, ชื่อโซน, ข้อความความรู้สึก, ชื่อผู้เขียน, วันที่โพสต์, และตราประทับ `BJK • PARK`
-  - ปุ่มกดหัวใจ (Like Button) พร้อมตัวเลขนับจำนวนไลก์และบันทึกลงฐานข้อมูลทันที
-  - ตัวกรองตามโซน (ทั้งหมด, สวนป่า & Skywalk, พื้นที่ชุ่มน้ำ, ทะเลสาบ, ลานอัฒจันทร์, สวนสุนัข)
-
----
-
-### 3. แผนที่และระบบนำทาง (Interactive GIS Map)
-- ขับเคลื่อนด้วย **Leaflet.js** (OpenStreetMap + Esri Satellite View) **ฟรี 100% ไม่มีลายน้ำ API Key**
-- หมุดจำแนกสีตามหมวดหมู่: ประตูทางเข้า-ออก, ลานจอดรถ, ศูนย์กีฬา, ห้องน้ำ/บริการ, จุดชมวิว Skywalk
-- ตัวกรอง Category Filter Pills และ Side Panel แสดงรายละเอียดพร้อมปุ่มนำทาง Google Maps
-
-### 4. เส้นทางออกกำลังกาย & ศูนย์กีฬา (Activities & Sports)
-- 3 เส้นทางออกกำลังกาย: ลู่วิ่งรอบใหญ่ 5.8 กม., เลนจักรยาน 3.2 กม., เส้นทาง Skywalk 1.6 กม.
-- คู่มือศูนย์กีฬาในร่ม: เข้าใช้งานฟรีแบบ Walk-in (05:00 - 21:00 น.) 6 ชนิดกีฬา
-- ปฏิทินกิจกรรม (Events Calendar)
-
-### 5. แหล่งเรียนรู้นิเวศ & กฎระเบียบ (Eco-Education & Visitor Info)
-- ฐานข้อมูลพรรณไม้และสัตว์ พร้อม Modal รายละเอียด
-- แนวคิดเมืองฟองน้ำ (Sponge City) และเรื่องราวความยั่งยืน
-- วิธีการเดินทางด้วย MRT ศูนย์ฯ สิริกิติ์, BTS อโศก, สะพานเขียว (Green Mile) และรถยนต์ส่วนตัว
-- กฎระเบียบของสวน และ FAQ Accordion
-
----
-
-## 🔌 การเชื่อมต่อ Backend / Database (เช่น Supabase หรือ REST API)
-
-โค้ดส่วน Data Layer ได้รับการออกแบบแยกส่วนแบบ Clean Architecture อยู่ในไฟล์ [`tournament-data.js`](file:///Users/driven/.gemini/antigravity/scratch/benjakitti-park-web/tournament-data.js) ผ่านคลาส `ReflectionDataService`:
-
-```javascript
-// ตัวอย่างการเชื่อมต่อกับ Supabase:
-class ReflectionDataService {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('user_reflections')
-      .select('*')
-      .order('created_at', { ascending: false });
-    return data;
-  }
-
-  async addReflection({ spotId, zoneNameTh, zoneNameEn, imageUrl, reflection, author }) {
-    const { data, error } = await supabase
-      .from('user_reflections')
-      .insert([{
-        spot_id: spotId,
-        zone_name_th: zoneNameTh,
-        zone_name_en: zoneNameEn,
-        image_url: imageUrl,
-        reflection_th: reflection,
-        author_th: author
-      }]);
-    return data[0];
-  }
-
-  async toggleLike(reflectionId) {
-    // เรียก RPC หรือ update count ใน Supabase
-  }
-}
+```bash
+npx serve .            # or
+python -m http.server 8000
 ```
 
-ปัจจุบันระบบตั้งค่าเริ่มต้นเป็น **LocalStorage (`benjakitti_reflections_v2`)** ร่วมกับ Mock Data 10 สถานที่และ 5 โปสการ์ดตั้งต้น ทำให้สามารถทดสอบฟีเจอร์ได้ทันทีโดยไม่ต้องตั้งค่า Server!
+(Opening `index.html` directly also works, but a server matches how Vercel serves the site.)
 
----
+## Edit the content → `content.js`
 
-## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+All the text is in **`content.js`**: group code, titles, tab banners, slideshow captions, interview cards, perceptions, the takeaway quote, the 8 game options, the feeling chips, and the park info, timeline, things to do and tips.
+Icons in The Park are minimal line icons chosen by name. The available names are listed in a comment in `content.js`.
+To change something, edit the text between the quotes and save.
+
+## Add photos → `assets/`
 
 ```
-benjakitti-park-web/
-├── index.html            # โครงสร้างหน้าเว็บหลัก + จุด Mount ของ Tournament (#tournament)
-├── styles.css            # ดีไซน์ Glassmorphism, แอนิเมชัน Tournament และการ์ดโปสการ์ด
-├── data.js              # ฐานข้อมูลข้อมูลสวน, แผนที่, เส้นทาง, UI Translations (TH/EN)
-├── tournament-data.js   # คลังภาพ 10 จุดในสวน, ข้อมูลโปสการ์ด, และ Data Service
-├── tournament.js        # Controller จัดการ 4 State (Intro, 5-Round Play, Result, Dashboard)
-├── app.js               # จัดการแผนที่ Leaflet, เสียงสังเคราะห์ และการแปลภาษา
-└── README.md             # เอกสารแนะนำและคู่มือการใช้งาน
+assets/hero.jpg              1st landing photo; also the blurred page background
+assets/landing/              2nd and 3rd landing photos (entrance.jpg, railing.jpg); crossfade every 5 s
+assets/visit/01.jpg … 25.jpg slideshow in the order we took the photos (Visit 1, then Visit 2);
+                             starts by itself when the tab opens, every 5 s; list + captions in content.js → visit.slides
+assets/game/                 game photos (1000 px, about 200 KB, so matches load fast). The game draws
+                             8 random photos from content.js → game.pool (needs at least 8)
 ```
+
+- File names must match `content.js` exactly (they're case-sensitive on Vercel).
+- Resize photos to **max 1600 px wide** (game photos: 1000 px) and export as JPG at ~75–80% quality (for example with [squoosh.app](https://squoosh.app)). Aim for about 200–400 KB each.
+- The raw originals live in `benjakitti-photos-raw/`, which is git-ignored and never deployed.
+- If a photo is missing, the site shows a neat labelled placeholder instead of a broken image.
+
+## Word wall (Play tab)
+
+By default, words are saved in each visitor's own browser (`localStorage`), so each person sees only their own words.
+To show **everyone's words live** during the presentation:
+
+1. In the Supabase dashboard, open the SQL editor and run `supabase.sql`.
+2. In `storage.js`, set `SHARED.enabled = true`, then deploy.
+
+The wall refreshes every 5 seconds on the thank-you screen.
+Only the public anon/publishable key goes in `storage.js`. **Never** put a `service_role` or secret key in front-end code.
+To use a different backend (for example Firebase), rewrite `saveWord()` and `getWords()` in `storage.js`. Nothing else needs to change.
+
+## Deploy
+
+**Vercel:** push to the connected GitHub repo and it deploys automatically. There is no config or build command. Static hosts like Netlify and GitHub Pages also work: just upload the folder.
+
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `index.html` | Page shell: landing screen, tab bar, panels |
+| `content.js` | **All editable content** |
+| `app.js` | Hash routing (`#visit`, `#play`, `#park`), slideshow, Our Visit + The Park tabs |
+| `game.js` | "Pick Your Benjakitti Favourite" tournament, reflection, word wall |
+| `storage.js` | Word wall storage (localStorage, optional Supabase) |
+| `styles.css` | All styling (mobile-first) |
+| `supabase.sql` | Optional table for the shared word wall |
