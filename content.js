@@ -92,12 +92,15 @@ window.SITE = {
     title:    { en: "A Visit to Benjakitti Forest Park", th: "เยือนสวนป่าเบญจกิติ" },
     subtitle: { en: "How an old tobacco factory became Bangkok's living lung", th: "จากโรงงานยาสูบเก่า สู่ปอดสีเขียวของกรุงเทพฯ" },
     // Background photos: crossfade every ~5 seconds (first one shows first)
+    // focus: the part of the photo to keep in view when the screen crops it ("x% y%", 0 0 = top-left).
+    // mobileFit: "contain" shows the whole photo on portrait phones (over a blurred copy),
+    // for photos where cropping would cut people out.
     backgrounds: [
-      { src: "assets/hero.jpg",
+      { src: "assets/hero.jpg", focus: "62% 58%",
         alt: { en: "Wooden boardwalks through the green wetland, with Bangkok skyscrapers behind", th: "ทางเดินไม้ผ่านพื้นที่ชุ่มน้ำสีเขียว มีตึกระฟ้าของกรุงเทพฯ อยู่ด้านหลัง" } },
-      { src: "assets/landing/entrance.jpg",
+      { src: "assets/landing/entrance.jpg", focus: "50% 62%", mobileFit: "contain",
         alt: { en: "Our group at the Benjakitti Forest Park entrance sign", th: "กลุ่มของเราที่ป้ายทางเข้าสวนป่าเบญจกิติ" } },
-      { src: "assets/landing/railing.jpg",
+      { src: "assets/landing/railing.jpg", focus: "50% 42%", mobileFit: "contain",
         alt: { en: "Visitors on the skywalk above the wetland", th: "ผู้มาเยือนบนสกายวอล์กเหนือพื้นที่ชุ่มน้ำ" } }
     ],
     button: { en: "Explore", th: "เริ่มสำรวจ" }

@@ -144,9 +144,28 @@ button { font: inherit; color: inherit; }
   transition: opacity 1.8s ease-in-out;
 }
 .landing-slide.is-active { opacity: 1; }
-.landing-slide img { animation: kenburns 24s ease-in-out infinite alternate; transform-origin: 60% 40%; }
-.landing-slide:nth-child(2) img { animation-delay: -8s; transform-origin: 30% 50%; }
-.landing-slide:nth-child(3) img { animation-delay: -16s; transform-origin: 50% 70%; }
+.landing-slide img {
+  object-position: var(--focus, 50% 50%); transform-origin: var(--focus, 50% 50%);
+  animation: kenburns 24s ease-in-out infinite alternate;
+}
+.landing-slide:nth-child(2) img { animation-delay: -8s; }
+.landing-slide:nth-child(3) img { animation-delay: -16s; }
+.landing-blur { display: none; }
+/* Portrait phones: a gentler zoom that stays centred on the focal point, so it doesn't crop more */
+@keyframes landingzoom { from { transform: scale(1); } to { transform: scale(1.05); } }
+@media (max-width: 768px) and (orientation: portrait) {
+  .landing-slide img { animation-name: landingzoom; animation-duration: 20s; }
+  /* Photos with people: show the whole photo, centred, over a blurred and darkened copy */
+  /* Sits just under the EN | TH switch, so the title below doesn't cover people's faces */
+  .landing-slide.fit-contain img {
+    position: relative; object-fit: contain; animation: none;
+    object-position: 50% calc(64px + env(safe-area-inset-top));
+  }
+  .landing-slide.fit-contain .landing-blur {
+    display: block; position: absolute; inset: -40px;
+    background: center / cover no-repeat; filter: blur(22px) brightness(0.5) saturate(1.15);
+  }
+}
 .landing-photo .photo-missing { justify-content: flex-start; padding-top: 28px; color: rgba(255, 255, 255, 0.8); }
 .landing-photo .photo-missing small { color: rgba(255, 255, 255, 0.6); }
 .landing::after {
