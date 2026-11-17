@@ -159,7 +159,7 @@ window.SITE = {
             quote: { en: "The sunset over the lake is my favourite part.", th: "พระอาทิตย์ตกเหนือทะเลสาบคือช่วงที่ฉันชอบที่สุด" },
             story: { en: "Runs here several evenings a week. The trees and water help her relax after work.", th: "มาวิ่งที่นี่หลายเย็นต่อสัปดาห์ ต้นไม้และสายน้ำช่วยให้เธอผ่อนคลายหลังเลิกงาน" },
             takeaway: { en: "Nature here is part of people's daily recovery from city life.", th: "ธรรมชาติที่นี่เป็นส่วนหนึ่งของการพักฟื้นจากชีวิตในเมืองในแต่ละวัน" },
-            translated: true
+            translated: false
           },
           {
             name: { en: "Park staff member", th: "เจ้าหน้าที่สวน" },
@@ -167,7 +167,7 @@ window.SITE = {
             quote: { en: "The wetlands are designed to filter water and hold rainwater during floods.", th: "พื้นที่ชุ่มน้ำถูกออกแบบมาให้กรองน้ำ และกักเก็บน้ำฝนในช่วงน้ำท่วม" },
             story: { en: "More birds have come since the trees grew bigger.", th: "มีนกมาอาศัยมากขึ้นตั้งแต่ต้นไม้โตขึ้น" },
             takeaway: { en: "The park's beauty is also in what it does: it cleans water and protects the city.", th: "ความงามของสวนยังอยู่ที่สิ่งที่สวนทำ ทั้งช่วยทำน้ำให้สะอาดและปกป้องเมือง" },
-            translated: true
+            translated: false
           },
           {
             name: { en: "Security guard", th: "พนักงานรักษาความปลอดภัย" },
@@ -175,7 +175,7 @@ window.SITE = {
             quote: { en: "Early morning is the most beautiful time.", th: "ช่วงเช้าตรู่คือเวลาที่สวยที่สุด" },
             story: { en: "Has worked here since the park opened. Loves the mist over the lake and the many birds, and says visitors take good care of the plants.", th: "ทำงานที่นี่มาตั้งแต่สวนเปิด ชอบหมอกที่ลอยเหนือทะเลสาบและฝูงนกจำนวนมาก และบอกว่าผู้มาเยือนช่วยกันดูแลต้นไม้เป็นอย่างดี" },
             takeaway: { en: "People who see the park every day still find it beautiful.", th: "แม้แต่คนที่เห็นสวนทุกวันก็ยังรู้สึกว่าที่นี่สวยงาม" },
-            translated: true
+            translated: false
           }
         ]
       },
