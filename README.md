@@ -20,6 +20,15 @@ All the text is in **`content.js`**: group code, titles, tab banners, slideshow 
 Icons in The Park are minimal line icons chosen by name. The available names are listed in a comment in `content.js`.
 To change something, edit the text between the quotes and save.
 
+### English / Thai
+
+Every piece of text has two versions: `{ en: "English", th: "ไทย" }`. Visitors switch with the **EN | TH** button (top-right on the landing page and in the tab bar). Their choice is remembered on their device, and English is the default.
+- Buttons, labels and screen-reader text are in `content.js → ui`. Words in `{curly braces}` are filled in automatically, so leave them as they are.
+- If a Thai version is missing or empty, the English text is shown instead.
+- Interview quotes show a small "แปลจากภาษาอังกฤษ" note in Thai. Set `translated: false` on any interview that was actually given in Thai.
+- The word wall always shows words exactly as visitors typed them.
+- Thai text uses the Noto Serif Thai and Noto Sans Thai fonts. They're only downloaded when someone switches to Thai.
+
 ## Add photos → `assets/`
 
 ```

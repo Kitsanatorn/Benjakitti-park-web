@@ -1,11 +1,36 @@
-/* Main app: landing screen, hash routing, and the "Our Visit" + "The Park" tabs.
-   All text comes from content.js. The game lives in game.js. */
+/* Main app: language (EN/TH), landing screen, hash routing, and the
+   "Our Visit" + "The Park" tabs. All text comes from content.js.
+   The game lives in game.js. */
 
 (() => {
   const S = window.SITE;
   const TABS = ["visit", "play", "park"];
-  const TAB_TITLES = { visit: "Our Visit", play: "Play", park: "The Park" };
+  const TAB_KEYS = { visit: "tabVisit", play: "tabPlay", park: "tabPark" };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  /* ---------- Language ---------- */
+  const LANGS = ["en", "th"];
+  const LANG_KEY = "benjakitti-lang";
+  let lang = (() => {
+    try {
+      const saved = localStorage.getItem(LANG_KEY);
+      return LANGS.includes(saved) ? saved : "en";
+    } catch (e) {
+      return "en";
+    }
+  })();
+  document.documentElement.lang = lang;
+
+  // Pick the current language from { en, th }; fall back to English if missing/empty.
+  const isText = (v) => v && typeof v === "object" && ("en" in v || "th" in v);
+  const t = (v) => {
+    if (v == null) return "";
+    if (!isText(v)) return String(v);
+    const value = v[lang];
+    return value != null && value !== "" ? value : (v.en ?? "");
+  };
+  const fill = (str, vars = {}) => str.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  const ui = (key, vars) => fill(t(S.ui[key]) || key, vars);
 
   /* ---------- Shared helpers (also used by game.js) ---------- */
   const esc = (value) =>
@@ -49,13 +74,22 @@
   const placeholder = (src, label) => `<span class="photo-missing" aria-hidden="true">
       ${icon("image", "photo-missing-icon")}
       <span>${esc(label)}</span>
-      <small>Add ${esc(src)}</small>
+      <small>${esc(ui("photoMissing", { src }))}</small>
     </span>`;
 
   // Escapes text, then turns **word** into a highlighted <strong>
   const emphasis = (text) => esc(text).replace(/\*\*(.+?)\*\*/g, '<strong class="hl">$1</strong>');
 
-  const markMissing =(img) => img.closest(".photo, .banner-photo")?.classList.add("is-missing");
+  // Small "แปลจากภาษาอังกฤษ" note under translated quotes (Thai only)
+  const translatedNote = (translated) => {
+    const note = translated && lang !== "en" ? ui("translatedNote") : "";
+    return note && note !== "translatedNote" ? `<span class="tr-note">${esc(note)}</span>` : "";
+  };
+
+  // Monogram letter; skips Thai leading vowels (เ แ โ ใ ไ) so "เจ้าหน้าที่" gives "จ"
+  const initial = (name) => name.replace(/^[เ-ไ]/, "").charAt(0);
+
+  const markMissing = (img) => img.closest(".photo, .banner-photo")?.classList.add("is-missing");
 
   // Catch image load errors anywhere (errors don't bubble, so use capture).
   document.addEventListener(
@@ -75,75 +109,126 @@
       }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 })
     : null;
 
-  function observeReveals(root) {
+  // instant = true when re-rendering for a language switch (no fade-in again)
+  function observeReveals(root, instant = false) {
     root.querySelectorAll("[data-reveal]").forEach((el, i) => {
-      if (!revealer) return el.classList.add("is-visible");
+      if (!revealer || instant) return el.classList.add("is-visible");
       el.style.setProperty("--delay", `${(i % 3) * 70}ms`);
       revealer.observe(el);
     });
   }
 
-  window.UI = { esc, photo, icon, reducedMotion, observeReveals };
+  window.UI = { esc, photo, icon, reducedMotion, observeReveals, t, ui, fill, translatedNote, getLang: () => lang };
 
   /* ---------- Rendering ---------- */
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  function renderStatic() {
-    $("#landing-label").textContent = S.group;
-    $("#landing-title").textContent = S.landing.title;
-    $("#landing-subtitle").textContent = S.landing.subtitle;
-    $("#explore-text").textContent = S.landing.button;
-    $("#explore-icon").innerHTML = icon("arrowRight");
+  // Static HTML: elements marked data-ui / data-ui-aria get their text from content.js
+  function renderChrome() {
+    document.querySelectorAll("[data-ui]").forEach((el) => { el.textContent = ui(el.dataset.ui); });
+    document.querySelectorAll("[data-ui-aria]").forEach((el) => { el.setAttribute("aria-label", ui(el.dataset.uiAria)); });
+    document.querySelectorAll(".lang-switch [data-lang]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+    });
+    $("#footer").innerHTML = `<span>${esc(S.group)}</span><span aria-hidden="true">·</span><span>${esc(t(S.course))}</span>`;
+  }
+
+  // Landing photos are built once (so the crossfade keeps running); text is updated in place
+  function renderLandingPhotos() {
     // All landing backgrounds load up front (eager) so the crossfade never flashes
     $("#landing-photo").innerHTML = S.landing.backgrounds
       .map((b, i) => `<div class="photo landing-slide${i === 0 ? " is-active" : ""}">
-          <img src="${esc(b.src)}" alt="${i === 0 ? esc(b.alt) : ""}" ${i === 0 ? 'fetchpriority="high"' : ""} decoding="async">
-          ${i === 0 ? placeholder(b.src, "Hero photo") : ""}
+          <img src="${esc(b.src)}" alt="" ${i === 0 ? 'fetchpriority="high"' : ""} decoding="async">
+          ${i === 0 ? placeholder(b.src, ui("heroPhoto")) : ""}
         </div>`)
       .join("");
-    $("#topbar-code").textContent = S.group;
-    $("#footer").innerHTML = `<span>${esc(S.group)}</span><span aria-hidden="true">·</span><span>${esc(S.course)}</span>`;
     document.documentElement.style.setProperty("--bg-photo", `url("${encodeURI(S.backgroundPhoto)}")`);
+  }
+
+  function renderLandingText() {
+    $("#landing-label").textContent = S.group;
+    $("#landing-title").textContent = t(S.landing.title);
+    $("#landing-subtitle").textContent = t(S.landing.subtitle);
+    $("#explore-text").textContent = t(S.landing.button);
+    $("#explore-icon").innerHTML = icon("arrowRight");
+    $("#topbar-code").textContent = S.group;
+    const first = $("#landing-photo .landing-slide img");
+    if (first) first.alt = t(S.landing.backgrounds[0].alt);
+    const ph = $("#landing-photo .photo-missing");
+    if (ph) ph.outerHTML = placeholder(S.landing.backgrounds[0].src, ui("heroPhoto"));
   }
 
   const banner = (b) => `<header class="banner">
       <div class="banner-photo" aria-hidden="true"><img src="${esc(b.src)}" alt="" loading="lazy" decoding="async"></div>
       <div class="banner-text wrap">
-        <p class="eyebrow eyebrow-light">${esc(b.eyebrow)}</p>
-        <h2 class="banner-title">${esc(b.title)}</h2>
-        <p class="banner-intro">${esc(b.intro)}</p>
+        <p class="eyebrow eyebrow-light">${esc(t(b.eyebrow))}</p>
+        <h2 class="banner-title">${esc(t(b.title))}</h2>
+        <p class="banner-intro">${esc(t(b.intro))}</p>
       </div>
     </header>`;
 
-  const sectionHead = (eyebrow, title, id) => `<div class="section-head" data-reveal>
-      <p class="eyebrow">${esc(eyebrow)}</p>
-      <h2 id="${id}">${esc(title)}</h2>
+  const sectionHead = (eyebrowKey, titleKey, id) => `<div class="section-head" data-reveal>
+      <p class="eyebrow">${esc(ui(eyebrowKey))}</p>
+      <h2 id="${id}">${esc(ui(titleKey))}</h2>
     </div>`;
 
+  // Our Visit: the slideshow is built once; everything around it can be re-rendered
   function renderVisit() {
     const v = S.visit;
-    const n = v.slides.length;
     const pad = (i) => String(i).padStart(2, "0");
-
     const slides = v.slides
       .map((s, i) => `<figure class="show-slide photo" data-i="${i}" aria-hidden="true">
           <img class="show-blur" data-src="${esc(s.src)}" alt="" decoding="async">
-          <img class="show-img" data-src="${esc(s.src)}" alt="${esc(s.alt || s.caption)}" decoding="async">
-          ${placeholder(s.src, s.caption)}
+          <img class="show-img" data-src="${esc(s.src)}" alt="" decoding="async">
+          ${placeholder(s.src, t(s.caption))}
         </figure>`)
       .join("");
+
+    $("#panel-visit").innerHTML = `
+      <div id="visit-banner"></div>
+      <div class="wrap">
+        <section class="section" aria-labelledby="h-photos">
+          <div id="visit-photos-head"></div>
+          <div class="show" role="region" data-reveal>
+            <div class="show-stage" tabindex="0">
+              ${slides}
+              <div class="show-shade" aria-hidden="true"></div>
+              <div class="show-progress" aria-hidden="true"><i></i></div>
+              <p class="show-caption" aria-live="off"></p>
+            </div>
+            <div class="show-controls">
+              <span class="show-count" aria-hidden="true"><b>01</b> / ${pad(v.slides.length)}</span>
+              <div class="show-buttons">
+                <button type="button" class="icon-btn" data-step="-1">${icon("chevronLeft")}</button>
+                <button type="button" class="icon-btn" data-toggle>${icon("pause")}</button>
+                <button type="button" class="icon-btn" data-step="1">${icon("chevronRight")}</button>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div id="visit-rest"></div>
+      </div>`;
+
+    slideshow = createSlideshow($("#panel-visit .show"), v.slides);
+    observeReveals($("#panel-visit .section"));
+    renderVisitText(false);
+  }
+
+  function renderVisitText(instant) {
+    const v = S.visit;
     const card = (p) => `<article class="quote-card${p.story ? "" : " is-short"}" data-reveal>
           <div class="quote-main">
             <span class="qmark" aria-hidden="true">“</span>
-            <blockquote class="quote-text">${esc(p.quote)}</blockquote>
+            <blockquote class="quote-text">${esc(t(p.quote))}</blockquote>
+            ${translatedNote(p.translated)}
             <div class="person">
-              <span class="mono" aria-hidden="true">${esc(p.name.charAt(0))}</span>
-              <div><strong>${esc(p.name)}</strong>${p.detail ? `<span>${esc(p.detail)}</span>` : ""}</div>
+              <span class="mono" aria-hidden="true">${esc(initial(t(p.name)))}</span>
+              <div><strong>${esc(t(p.name))}</strong>${p.detail ? `<span>${esc(t(p.detail))}</span>` : ""}</div>
             </div>
           </div>
-          ${p.story ? `<p class="said">${esc(p.story)}</p>` : ""}
-          ${p.quote2 ? `<blockquote class="quote-2">“${esc(p.quote2)}”</blockquote>` : ""}
-          <div class="learned"><span class="label">What we learned</span><p>${esc(p.takeaway)}</p></div>
+          ${p.story ? `<p class="said">${esc(t(p.story))}</p>` : ""}
+          ${p.quote2 ? `<div class="quote-2-wrap"><blockquote class="quote-2">“${esc(t(p.quote2))}”</blockquote>${translatedNote(p.translated)}</div>` : ""}
+          <div class="learned"><span class="label">${esc(ui("whatWeLearned"))}</span><p>${esc(t(p.takeaway))}</p></div>
         </article>`;
 
     // One block per fieldwork day; the grid gets as many columns as full cards (max 3)
@@ -152,8 +237,8 @@
         const cols = Math.min(3, Math.max(1, g.interviews.filter((p) => p.story).length));
         return `<div class="visit-group" aria-labelledby="h-visit-${gi}" role="group">
             <div class="visit-group-head" data-reveal>
-              <h3 id="h-visit-${gi}" class="visit-pill">${esc(g.title)}</h3>
-              ${g.date ? `<span class="visit-date">${esc(g.date)}</span>` : ""}
+              <h3 id="h-visit-${gi}" class="visit-pill">${esc(t(g.title))}</h3>
+              ${g.date ? `<span class="visit-date">${esc(t(g.date))}</span>` : ""}
             </div>
             <div class="quote-grid" data-cols="${cols}">${g.interviews.map(card).join("")}</div>
           </div>`;
@@ -161,104 +246,84 @@
       .join("");
     const cq = v.closingQuote;
 
-    $("#panel-visit").innerHTML = `
-      ${banner(v.banner)}
-      <div class="wrap">
-        <section class="section" aria-labelledby="h-photos">
-          ${sectionHead("Photo diary", "Our Day at the Park", "h-photos")}
-          <div class="show" role="region" aria-roledescription="carousel" aria-label="Photos from our visit" data-reveal>
-            <div class="show-stage" tabindex="0" aria-label="Photo slideshow. Use left and right arrow keys to change photo.">
-              ${slides}
-              <div class="show-shade" aria-hidden="true"></div>
-              <div class="show-progress" aria-hidden="true"><i></i></div>
-              <p class="show-caption" aria-live="off"></p>
-            </div>
-            <div class="show-controls">
-              <span class="show-count" aria-hidden="true"><b>01</b> / ${pad(n)}</span>
-              <div class="show-buttons">
-                <button type="button" class="icon-btn" data-step="-1" aria-label="Previous photo">${icon("chevronLeft")}</button>
-                <button type="button" class="icon-btn" data-toggle aria-label="Pause slideshow">${icon("pause")}</button>
-                <button type="button" class="icon-btn" data-step="1" aria-label="Next photo">${icon("chevronRight")}</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
+    $("#visit-banner").innerHTML = banner(v.banner);
+    $("#visit-photos-head").innerHTML = sectionHead("photosEyebrow", "photosTitle", "h-photos");
+    $("#visit-rest").innerHTML = `
         <section class="section" aria-labelledby="h-interviews">
-          ${sectionHead("Interviews", "What people told us", "h-interviews")}
+          ${sectionHead("interviewsEyebrow", "interviewsTitle", "h-interviews")}
           ${groups}
           <aside class="theme" data-reveal>
-            <span class="label">Common theme</span>
-            <p>${emphasis(v.commonTheme)}</p>
+            <span class="label">${esc(ui("commonTheme"))}</span>
+            <p>${emphasis(t(v.commonTheme))}</p>
           </aside>
           ${cq ? `<figure class="closing-quote" data-reveal>
-            <blockquote>“${esc(cq.text)}”</blockquote>
-            <figcaption>— ${esc(cq.by)}</figcaption>
+            <blockquote>“${esc(t(cq.text))}”</blockquote>
+            ${translatedNote(cq.translated)}
+            <figcaption>— ${esc(t(cq.by))}</figcaption>
           </figure>` : ""}
         </section>
 
         <section class="section" aria-labelledby="h-perceptions">
           <div class="editorial-intro">
-            ${sectionHead("Reflection", "Our final perceptions", "h-perceptions")}
-            <p class="prose" data-reveal>${esc(v.perceptions)}</p>
+            ${sectionHead("reflectionEyebrow", "perceptionsTitle", "h-perceptions")}
+            <p class="prose" data-reveal>${esc(t(v.perceptions))}</p>
           </div>
           <figure class="editorial" data-reveal>
-            <blockquote>“${esc(S.takeaway)}”</blockquote>
-            <figcaption>Key takeaway · ${esc(S.group)}</figcaption>
+            <blockquote>“${esc(t(S.takeaway))}”</blockquote>
+            <figcaption>${esc(ui("keyTakeaway"))} · ${esc(S.group)}</figcaption>
           </figure>
-        </section>
-      </div>`;
+        </section>`;
 
-    slideshow = createSlideshow($("#panel-visit .show"), v.slides);
-    observeReveals($("#panel-visit"));
+    ["#visit-banner", "#visit-photos-head", "#visit-rest"].forEach((sel) => observeReveals($(sel), instant));
+    slideshow?.relabel();
   }
 
-  function renderPark() {
+  function renderPark(instant = false) {
     const p = S.park;
     const info = p.info
       .map((i) => `<li class="info-card" data-reveal>
           <span class="icon-wrap">${icon(i.icon)}</span>
-          <div><span class="label">${esc(i.label)}</span><p>${esc(i.value)}</p></div>
+          <div><span class="label">${esc(t(i.label))}</span><p>${esc(t(i.value))}</p></div>
         </li>`)
       .join("");
     const timeline = p.timeline
-      .map((t) => `<li data-reveal><span class="year">${esc(t.year)}</span><p>${esc(t.text)}</p></li>`)
+      .map((x) => `<li data-reveal><span class="year">${esc(t(x.year))}</span><p>${esc(t(x.text))}</p></li>`)
       .join("");
     const todo = p.thingsToDo
-      .map((t) => `<li class="todo-card" data-reveal><span class="icon-wrap">${icon(t.icon)}</span><span>${esc(t.text)}</span></li>`)
+      .map((x) => `<li class="todo-card" data-reveal><span class="icon-wrap">${icon(x.icon)}</span><span>${esc(t(x.text))}</span></li>`)
       .join("");
-    const tips = p.tips.map((t) => `<li>${icon("check")}<span>${esc(t)}</span></li>`).join("");
+    const tips = p.tips.map((x) => `<li>${icon("check")}<span>${esc(t(x))}</span></li>`).join("");
 
     $("#panel-park").innerHTML = `
       ${banner(p.banner)}
       <div class="wrap">
         <section class="section" aria-labelledby="h-info">
-          ${sectionHead("Plan a visit", "Location & visiting info", "h-info")}
+          ${sectionHead("planEyebrow", "infoTitle", "h-info")}
           <ul class="info-grid">${info}</ul>
           <div data-reveal>
             <a class="btn btn-primary" href="${esc(p.mapsUrl)}" target="_blank" rel="noopener noreferrer">
-              Open in Google Maps ${icon("external", "icon btn-icon")}<span class="sr-only"> (opens in a new tab)</span>
+              ${esc(ui("openMaps"))} ${icon("external", "icon btn-icon")}<span class="sr-only"> ${esc(ui("newTab"))}</span>
             </a>
           </div>
         </section>
 
         <section class="section" aria-labelledby="h-history">
-          ${sectionHead("History", "From factory to forest", "h-history")}
+          ${sectionHead("historyEyebrow", "historyTitle", "h-history")}
           <ol class="timeline">${timeline}</ol>
         </section>
 
         <section class="section" aria-labelledby="h-todo">
-          ${sectionHead("Things to do", "Make the most of it", "h-todo")}
+          ${sectionHead("todoEyebrow", "todoTitle", "h-todo")}
           <ul class="todo-grid">${todo}</ul>
         </section>
 
         <section class="section" aria-labelledby="h-tips">
-          ${sectionHead("Be a good visitor", "Visitor tips", "h-tips")}
+          ${sectionHead("tipsEyebrow", "tipsTitle", "h-tips")}
           <ul class="tips" data-reveal>${tips}</ul>
         </section>
       </div>`;
 
-    observeReveals($("#panel-park"));
+    observeReveals($("#panel-park"), instant);
   }
 
   /* ---------- Slideshow: autoplay crossfade ---------- */
@@ -274,7 +339,7 @@
     const count = $(".show-count b", root);
     const toggle = $("[data-toggle]", root);
     const n = slides.length;
-    const pauses = new Set(); // reasons: hover, hold, focus, hidden, offscreen, user
+    const pauses = new Set(); // reasons: tab, hover, hold, hidden, user
     let current = -1;   // photo on screen
     let wanted = -1;    // photo we're moving to (may still be decoding)
     let token = 0;      // newest request wins if several arrive quickly
@@ -287,6 +352,19 @@
       });
       return slides[i].querySelector(".show-img");
     };
+
+    function showCaption(i, animate) {
+      const d = data[i];
+      caption.classList.remove("is-in");
+      caption.innerHTML = (d.visit ? `<span class="show-visit">${esc(t(d.visit))}</span>` : "") +
+        `<span>${esc(t(d.caption))}</span>`;
+      if (animate) {
+        void caption.offsetWidth;
+        caption.classList.add("is-in");
+      } else {
+        caption.style.opacity = "1";
+      }
+    }
 
     async function go(target, restart = false) {
       const i = ((target % n) + n) % n;
@@ -305,11 +383,8 @@
       slides[i].removeAttribute("aria-hidden");
       load((i + 1) % n); // preload the next photo so the crossfade never flashes
 
-      caption.classList.remove("is-in");
-      caption.innerHTML = (data[i].visit ? `<span class="show-visit">${esc(data[i].visit)}</span>` : "") +
-        `<span>${esc(data[i].caption)}</span>`;
-      void caption.offsetWidth;
-      caption.classList.add("is-in");
+      caption.style.opacity = "";
+      showCaption(i, true);
       count.textContent = String(i + 1).padStart(2, "0");
 
       // One thin bar for the whole show: it fills this photo's share while it's on screen
@@ -347,9 +422,23 @@
       root.classList.toggle("is-paused", pauses.size > 0);
       const userPaused = pauses.has("user");
       toggle.innerHTML = icon(userPaused ? "play" : "pause");
-      toggle.setAttribute("aria-label", userPaused ? "Play slideshow" : "Pause slideshow");
+      toggle.setAttribute("aria-label", ui(userPaused ? "playSlideshow" : "pauseSlideshow"));
       // Announce captions to screen readers only when not auto-advancing
       caption.setAttribute("aria-live", pauses.size ? "polite" : "off");
+    }
+
+    // Language switch: update labels, alt text and the caption without touching playback
+    function relabel() {
+      root.setAttribute("aria-label", ui("slideshowRegion"));
+      stage.setAttribute("aria-label", ui("slideshowStage"));
+      root.querySelector('[data-step="-1"]').setAttribute("aria-label", ui("prevPhoto"));
+      root.querySelector('[data-step="1"]').setAttribute("aria-label", ui("nextPhoto"));
+      slides.forEach((s, i) => {
+        s.querySelector(".show-img").alt = t(data[i].alt || data[i].caption);
+        s.querySelector(".photo-missing").outerHTML = placeholder(data[i].src, t(data[i].caption));
+      });
+      sync();
+      if (current >= 0) showCaption(current, false);
     }
 
     // Temporary pauses: mouse hover and touch-hold. Both always resume by themselves.
@@ -396,7 +485,7 @@
       go(0, true);
     }
 
-    return { step, pause, resume, start };
+    return { step, pause, resume, start, relabel };
   }
 
   // Arrow keys change the photo while on the "Our Visit" tab (not while typing).
@@ -433,17 +522,22 @@
     return TABS.includes(h) ? h : null;
   };
 
+  function updateTitle() {
+    const tab = currentTab();
+    document.title = tab ? `${ui(TAB_KEYS[tab])} · ${ui("siteTitle")}` : ui("siteTitle");
+  }
+
   function route() {
     const tab = currentTab();
     const landing = $("#landing");
     const app = $("#app");
+    updateTitle();
 
     if (!tab) {
       app.hidden = true;
       landing.hidden = false;
       slideshow?.pause("tab");
       startLanding();
-      document.title = S.landing.title;
       return;
     }
     stopLanding();
@@ -451,7 +545,6 @@
     const wasLanding = !landing.hidden;
     landing.hidden = true;
     app.hidden = false;
-    document.title = `${TAB_TITLES[tab]} · ${S.landing.title}`;
 
     $(".tabs").style.setProperty("--i", TABS.indexOf(tab));
     document.querySelectorAll(".tab").forEach((a) => {
@@ -471,13 +564,34 @@
     }
   }
 
+  /* ---------- Switching language: instant, no reload, keeps slideshow & game state ---------- */
+  function setLang(next) {
+    if (!LANGS.includes(next) || next === lang) return;
+    lang = next;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* private mode: just don't remember */ }
+    document.documentElement.lang = lang;
+    renderChrome();
+    renderLandingText();
+    renderVisitText(true);
+    renderPark(true);
+    window.Game.refresh();
+    updateTitle();
+  }
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".lang-switch [data-lang]");
+    if (btn) setLang(btn.dataset.lang);
+  });
+
   // Frosted top bar gets a stronger background once the page scrolls
   window.addEventListener("scroll", () => {
     document.body.classList.toggle("is-scrolled", window.scrollY > 8);
   }, { passive: true });
 
   document.addEventListener("DOMContentLoaded", () => {
-    renderStatic();
+    renderChrome();
+    renderLandingPhotos();
+    renderLandingText();
     renderVisit();
     renderPark();
     $("#explore-btn").addEventListener("click", () => { location.hash = "visit"; });

@@ -4,24 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>A Visit to Benjakitti Forest Park</title>
-  <meta name="description" content="Group exhibition (GEN241 Real Aesthete, KMUTT): how an old tobacco factory became Bangkok's living lung.">
+  <meta name="description" content="Group exhibition (GEN241 Real Aesthete, KMUTT): how an old tobacco factory became Bangkok's living lung. นิทรรศการกลุ่ม: จากโรงงานยาสูบเก่า สู่ปอดสีเขียวของกรุงเทพฯ">
   <meta name="theme-color" content="#3FA34D">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232B7A35'/><text x='32' y='45' font-family='Georgia,serif' font-size='36' fill='%23F6C945' text-anchor='middle'>B</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap">
+  <!-- Latin: DM Serif Display + Inter. Thai: Noto Serif Thai + Noto Sans Thai (only downloaded when Thai is shown) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=Noto+Serif+Thai:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <!-- Landing screen (shown when the URL has no #tab) -->
   <section id="landing" class="landing" aria-labelledby="landing-title">
     <div id="landing-photo" class="landing-photo"></div>
+    <div class="lang-switch lang-switch--dark landing-lang" role="group" data-ui-aria="language">
+      <button type="button" data-lang="en" lang="en" aria-label="English">EN</button>
+      <button type="button" data-lang="th" lang="th" aria-label="ภาษาไทย">TH</button>
+    </div>
     <div class="landing-content">
       <p id="landing-label" class="landing-label"></p>
       <h1 id="landing-title"></h1>
       <p id="landing-subtitle" class="landing-sub"></p>
       <button type="button" id="explore-btn" class="btn btn-primary btn-lg">
-        <span id="explore-text">Explore</span>
+        <span id="explore-text"></span>
         <span class="btn-icon" id="explore-icon" aria-hidden="true"></span>
       </button>
     </div>
@@ -32,26 +37,35 @@
     <div class="app-bg" aria-hidden="true"></div>
 
     <header class="topbar">
-      <a class="brand" href="#" aria-label="Back to the start">Benjakitti</a>
-      <nav class="tabs" aria-label="Sections">
+      <a class="brand" href="#" data-ui="brand" data-ui-aria="backToStart"></a>
+      <nav class="tabs" data-ui-aria="sections">
         <span class="tab-indicator" aria-hidden="true"></span>
-        <a class="tab" href="#visit" data-tab="visit">Our Visit</a>
-        <a class="tab" href="#play" data-tab="play">Play</a>
-        <a class="tab" href="#park" data-tab="park">The Park</a>
+        <a class="tab" href="#visit" data-tab="visit" data-ui="tabVisit"></a>
+        <a class="tab" href="#play" data-tab="play" data-ui="tabPlay"></a>
+        <a class="tab" href="#park" data-tab="park" data-ui="tabPark"></a>
       </nav>
-      <span class="topbar-code" id="topbar-code"></span>
+      <div class="topbar-right">
+        <span class="topbar-code" id="topbar-code"></span>
+        <div class="lang-switch" role="group" data-ui-aria="language">
+          <button type="button" data-lang="en" lang="en" aria-label="English">EN</button>
+          <button type="button" data-lang="th" lang="th" aria-label="ภาษาไทย">TH</button>
+        </div>
+      </div>
     </header>
 
     <main>
-      <div id="panel-visit" class="panel" data-panel="visit" tabindex="-1" aria-label="Our Visit" hidden></div>
-      <div id="panel-play" class="panel" data-panel="play" tabindex="-1" aria-label="Play" hidden></div>
-      <div id="panel-park" class="panel" data-panel="park" tabindex="-1" aria-label="The Park" hidden></div>
+      <div id="panel-visit" class="panel" data-panel="visit" tabindex="-1" data-ui-aria="tabVisit" hidden></div>
+      <div id="panel-play" class="panel" data-panel="play" tabindex="-1" data-ui-aria="tabPlay" hidden></div>
+      <div id="panel-park" class="panel" data-panel="park" tabindex="-1" data-ui-aria="tabPark" hidden></div>
     </main>
 
     <footer id="footer" class="footer"></footer>
   </div>
 
-  <noscript><p class="noscript">Please turn on JavaScript to view this exhibition.</p></noscript>
+  <noscript>
+    <p class="noscript">Please turn on JavaScript to view this exhibition.<br>
+      <span lang="th">กรุณาเปิดใช้งาน JavaScript เพื่อชมนิทรรศการนี้</span></p>
+  </noscript>
 
   <script src="content.js"></script>
   <script src="storage.js"></script>
