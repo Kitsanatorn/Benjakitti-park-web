@@ -137,7 +137,9 @@
   function renderLandingPhotos() {
     // All landing backgrounds load up front (eager) so the crossfade never flashes
     $("#landing-photo").innerHTML = S.landing.backgrounds
-      .map((b, i) => `<div class="photo landing-slide${i === 0 ? " is-active" : ""}">
+      .map((b, i) => `<div class="photo landing-slide${i === 0 ? " is-active" : ""}${b.mobileFit === "contain" ? " fit-contain" : ""}"
+          style="--focus: ${esc(b.focus || "50% 50%")}">
+          ${b.mobileFit === "contain" ? `<div class="landing-blur" style="background-image: url('${esc(encodeURI(b.src))}')"></div>` : ""}
           <img src="${esc(b.src)}" alt="" ${i === 0 ? 'fetchpriority="high"' : ""} decoding="async">
           ${i === 0 ? placeholder(b.src, ui("heroPhoto")) : ""}
         </div>`)
