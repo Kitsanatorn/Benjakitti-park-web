@@ -1,74 +1,74 @@
 # A Visit to Benjakitti Forest Park
 
-Group exhibition website for **GEN241 Module 3 "Interactive Exhibition: Real Aesthete"** (KMUTT), theme **Nature's Beauty**.
-It's a static site built with plain HTML, CSS and JavaScript. There is no build step and no backend is required.
+Interactive exhibition website for **GEN241 Module 3 (Real Aesthete)**, group **INT-33-03**, KMUTT. Theme: **Nature's Beauty**.
+
+**Live site:** <!-- TODO: add Vercel link --> _coming soon_
+
+## Features
+
+- **Landing page:** park photos that crossfade every 5 seconds, with an "Explore" button.
+- **EN / TH switch:** at the top right of the landing page and in the tab bar. English is the default, and each visitor's choice is remembered on their device.
+- **Our Visit:**
+  - An autoplay slideshow of our photos.
+  - Interviews from both visits.
+  - The common theme, visitor perceptions and our key takeaway.
+- **Play: Pick Your Benjakitti Favourite.**
+  - 8 random park photos, 3 rounds (quarterfinals, semifinal, final).
+  - After the final, a short reflection and a word wall of how visitors felt.
+- **The Park:** visiting info, a timeline, things to do and tips.
+
+## Project structure
+
+| Path | What it does |
+| --- | --- |
+| `index.html` | Page shell: landing screen, tab bar, the three tabs |
+| `styles.css` | All styling (mobile-first, green and yellow theme, Thai fonts) |
+| `app.js` | Tab routing (`#visit`, `#play`, `#park`), language switch, slideshow, Our Visit and The Park tabs |
+| `content.js` | **All text and photo lists**, in English and Thai |
+| `game.js` | The favourite-photo game, reflection and word wall |
+| `storage.js` | Saves word-wall entries (localStorage, or Supabase if enabled) |
+| `supabase.sql` | Optional table for a shared live word wall |
+| `assets/hero.jpg` | First landing photo and blurred page background |
+| `assets/landing/` | The other landing photos |
+| `assets/visit/` | Slideshow photos (`01.jpg` … `25.jpg`) |
+| `assets/game/` | Game photos (smaller, 1000 px) |
+
+## How to edit
+
+**Text and translations:** everything is in `content.js`. Each piece of text has two versions:
+
+```js
+caption: { en: "The shaded cycle path", th: "ทางจักรยานที่ร่มรื่น" }
+```
+
+- Edit the text inside the quotes.
+- If the Thai version is empty, the English text is shown instead.
+- Leave words in `{curly braces}` as they are. They're filled in automatically.
+- Set `translated: false` on an interview that was given in Thai. That hides the "แปลจากภาษาอังกฤษ" note.
+
+**Photos:**
+1. Resize to about **1600 px wide** (game photos: 1000 px) and export as **JPG**, ideally 200–400 KB. [squoosh.app](https://squoosh.app) works well for this.
+2. Put the file in the right `assets/` folder.
+3. Add or update its entry in `content.js`. File names are case-sensitive on Vercel.
+
+If a photo is missing, the site shows a labelled placeholder instead of a broken image.
+
+## Word wall
+
+By default, words are saved in each visitor's browser (`localStorage`), so everyone sees only their own words.
+
+To show **everyone's words live** (for example during the presentation):
+1. In the Supabase dashboard, open the SQL editor and run `supabase.sql`.
+2. In `storage.js`, set `enabled: true`, then deploy.
+
+Only the **public anon key** goes in front-end code. Never put a `service_role` or secret key in this repo.
 
 ## Run locally
 
-From the project folder, start any static server and open the address it prints:
-
 ```bash
-npx serve .            # or
-python -m http.server 8000
+npx serve .        # or: python -m http.server 8000
 ```
-
-(Opening `index.html` directly also works, but a server matches how Vercel serves the site.)
-
-## Edit the content → `content.js`
-
-All the text is in **`content.js`**: group code, titles, tab banners, slideshow captions, interview cards, perceptions, the takeaway quote, the 8 game options, the feeling chips, and the park info, timeline, things to do and tips.
-Icons in The Park are minimal line icons chosen by name. The available names are listed in a comment in `content.js`.
-To change something, edit the text between the quotes and save.
-
-### English / Thai
-
-Every piece of text has two versions: `{ en: "English", th: "ไทย" }`. Visitors switch with the **EN | TH** button (top-right on the landing page and in the tab bar). Their choice is remembered on their device, and English is the default.
-- Buttons, labels and screen-reader text are in `content.js → ui`. Words in `{curly braces}` are filled in automatically, so leave them as they are.
-- If a Thai version is missing or empty, the English text is shown instead.
-- Interview quotes show a small "แปลจากภาษาอังกฤษ" note in Thai. Set `translated: false` on any interview that was actually given in Thai.
-- The word wall always shows words exactly as visitors typed them.
-- Thai text uses the Noto Serif Thai and Noto Sans Thai fonts. They're only downloaded when someone switches to Thai.
-
-## Add photos → `assets/`
-
-```
-assets/hero.jpg              1st landing photo; also the blurred page background
-assets/landing/              2nd and 3rd landing photos (entrance.jpg, railing.jpg); crossfade every 5 s
-assets/visit/01.jpg … 25.jpg slideshow in the order we took the photos (Visit 1, then Visit 2);
-                             starts by itself when the tab opens, every 5 s; list + captions in content.js → visit.slides
-assets/game/                 game photos (1000 px, about 200 KB, so matches load fast). The game draws
-                             8 random photos from content.js → game.pool (needs at least 8)
-```
-
-- File names must match `content.js` exactly (they're case-sensitive on Vercel).
-- Resize photos to **max 1600 px wide** (game photos: 1000 px) and export as JPG at ~75–80% quality (for example with [squoosh.app](https://squoosh.app)). Aim for about 200–400 KB each.
-- The raw originals live in `benjakitti-photos-raw/`, which is git-ignored and never deployed.
-- If a photo is missing, the site shows a neat labelled placeholder instead of a broken image.
-
-## Word wall (Play tab)
-
-By default, words are saved in each visitor's own browser (`localStorage`), so each person sees only their own words.
-To show **everyone's words live** during the presentation:
-
-1. In the Supabase dashboard, open the SQL editor and run `supabase.sql`.
-2. In `storage.js`, set `SHARED.enabled = true`, then deploy.
-
-The wall refreshes every 5 seconds on the thank-you screen.
-Only the public anon/publishable key goes in `storage.js`. **Never** put a `service_role` or secret key in front-end code.
-To use a different backend (for example Firebase), rewrite `saveWord()` and `getWords()` in `storage.js`. Nothing else needs to change.
 
 ## Deploy
 
-**Vercel:** push to the connected GitHub repo and it deploys automatically. There is no config or build command. Static hosts like Netlify and GitHub Pages also work: just upload the folder.
-
-## Files
-
-| File | Purpose |
-| --- | --- |
-| `index.html` | Page shell: landing screen, tab bar, panels |
-| `content.js` | **All editable content** |
-| `app.js` | Hash routing (`#visit`, `#play`, `#park`), slideshow, Our Visit + The Park tabs |
-| `game.js` | "Pick Your Benjakitti Favourite" tournament, reflection, word wall |
-| `storage.js` | Word wall storage (localStorage, optional Supabase) |
-| `styles.css` | All styling (mobile-first) |
-| `supabase.sql` | Optional table for the shared word wall |
+Plain static site with no build step. Push to the GitHub repo connected to Vercel and it deploys automatically.
